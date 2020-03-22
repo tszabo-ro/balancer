@@ -8,7 +8,7 @@ Motor::Motor(int fwd_pin, int bck_pin, int max_output, int min_output)
 {
 }
 
-void Motor::setSpeed(double vel)
+int16_t Motor::setSpeed(double vel)
 {
   int drive_pin = fwd_pin_;
   int off_pin = bck_pin_;
@@ -26,9 +26,9 @@ void Motor::setSpeed(double vel)
   }
 
   uint8_t send_vel = static_cast<uint8_t>(vel);
-  Serial.print(send_vel * ((drive_pin == fwd_pin_) ? 1 : -1));
-  Serial.print(" ");
 
   analogWrite(drive_pin, send_vel);
   analogWrite(off_pin, 0);
+
+  return send_vel * ((drive_pin == fwd_pin_) ? 1 : -1);
 }
