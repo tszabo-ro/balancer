@@ -16,7 +16,7 @@ MPU6050Wrapper::MPU6050Wrapper(int interrupt_pin, int mpu_id)
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
-        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+        //Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
         Fastwire::setup(400, true);
     #endif
@@ -57,7 +57,7 @@ int MPU6050Wrapper::initialize(int gyro_x_offset,
     if (dev_status == 0)
     {
         mpu->setDMPEnabled(true);
-        attachInterrupt(digitalPinToInterrupt(interrupt_pin), [](){ mpuInterrupt = true; }, RISING);
+        attachInterrupt(interrupt_pin, [](){ mpuInterrupt = true; }, RISING);
 
         dmp_ready = true;
     }
