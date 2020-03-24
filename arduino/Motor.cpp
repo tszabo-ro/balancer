@@ -8,7 +8,7 @@ Motor::Motor(int fwd_pin, int bck_pin, int max_output, int min_output)
 {
 }
 
-int16_t Motor::setSpeed(double vel)
+int16_t Motor::setSpeed(int16_t vel)
 {
   int drive_pin = fwd_pin_;
   int off_pin = bck_pin_;
@@ -18,11 +18,18 @@ int16_t Motor::setSpeed(double vel)
     off_pin = fwd_pin_;
   }
 
-  vel = constrain(round(fabs(vel) * 255), 0, max_out_);
+  vel = constrain(abs(vel), 0, max_out_);
 
   if (vel < min_out_)
   {
+    if (vel < min_out_ / 2)
+    {
       vel = 0;
+    }
+    else
+    {
+      vel = min_out_;
+    }
   }
 
   uint8_t send_vel = static_cast<uint8_t>(vel);
