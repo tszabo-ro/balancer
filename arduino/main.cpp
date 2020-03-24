@@ -25,6 +25,7 @@ Motor right_motor(10, 11, 254, 0);
 void setup()
 {
   Serial.begin(115200);
+  Serial.setTimeout(2);
   mpu.initialize( -59,    // gyro_x_offset
                   9,      // gyro_y_offset
                   -30,    // gyro_z_offset
@@ -63,8 +64,9 @@ void fastLoop(unsigned long T)
   }
 }
 
-float kP = 1;
-float kD = 1;
+float kP = 5;
+float kD = 0.25;
+float kI = 0;
 
 void slowLoop(unsigned long T)
 {
@@ -102,6 +104,59 @@ void commLoop(unsigned long T)
     return;
   }
   last_comm_exec  = T;
+
+  if (Serial.available() > 6)
+  {
+    float kp = -1;
+    float kd = -1;
+    float ki = -1;
+
+    String kp_str = Serial.readStringUntil('/');
+    Serial.println(kp_str.length());
+    if (kp_str.length() != 0) // The terminating \n is one char!
+    {
+      kp = kp_str.toFloat();
+
+      String kd_str = Serial.readStringUntil('/');
+      Serial.println(kd_str.length());
+      if (kd_str.length() != 0)
+      {
+        kd = kd_str.toFloat();
+
+        String ki_str = Serial.readStringUntil('/');
+        Serial.println(ki_str.length());
+        if (ki_str.length() != 0)
+        {
+          ki = ki_str.toFloat();
+        }
+        else
+        {
+          kp = -1; kd = -1; ki = -1;
+        }
+      }
+      else
+      {
+        kp = -1; kd = -1; ki = -1;
+      }
+    }
+    else
+    {
+      kp = -1; kd = -1; ki = -1;
+    }
+
+    while (Serial.available())
+    {
+      Serial.read();
+    }
+
+    if ((kp >= 0) && (kd >= 0) && (ki >= 0))
+    {
+      kP = kp;
+      kD = kd;
+      kI = ki;
+      error_integral = 0;
+    }
+  }
 }
 
 void loop()
