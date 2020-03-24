@@ -49,6 +49,7 @@ unsigned long last_comm_exec = 0;
 
 
 SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
+double error_integral = 0;
 
 void fastLoop(unsigned long T)
 {
@@ -76,17 +77,30 @@ void slowLoop(unsigned long T)
   }
   last_slow_exec  = T;
 
-
   double err = imu_filter.filter(0);
   double err_diff = imu_filter.filter(1);
 
-  float cmd = (-1) * (kP * err + kD * err_diff);
-  auto left_setspeed = left_motor.setSpeed(cmd);
-  auto right_setspeed = right_motor.setSpeed(cmd);
+  if (((error_integral > 0) && (err < 0)) || ((error_integral < 0) && (err > 0)) || (fabs(error_integral * kI) < 255.0))
+  {
+    double err_delta = err*slow_loop_rate_ms/1000;
+    error_integral += err_delta;
+  }
 
+  float cmd = (-1) * (kP * err + kD * err_diff + kI * error_integral);
+  auto left_setspeed = left_motor.setSpeed(round(cmd));
+  auto right_setspeed = right_motor.setSpeed(round(cmd));
+
+  Serial.print(kP);
+  Serial.print(" ");
+  Serial.print(kD);
+  Serial.print(" ");
+  Serial.print(kI * 10);
+  Serial.print(" ");
   Serial.print(err * 10);
   Serial.print(" ");
   Serial.print(err_diff * 10);
+  Serial.print(" ");
+  Serial.print(error_integral * 10);
   Serial.print(" ");
   Serial.print(cmd * 10);
   Serial.print(" ");
