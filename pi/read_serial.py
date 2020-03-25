@@ -43,9 +43,9 @@ class Communicator(threading.Thread):
             self.__data['kp']  = float(parsed_str[1])
             self.__data['kd']  = float(parsed_str[2])
             self.__data['ki']  = float(parsed_str[3])
-            self.__data['e']   = float(parsed_str[4])
-            self.__data['de']  = float(parsed_str[5])
-            self.__data['ie']  = float(parsed_str[6])
+            self.__data['e']   = float(parsed_str[4])/10
+            self.__data['de']  = float(parsed_str[5])/10
+            self.__data['ie']  = float(parsed_str[6])/10
             self.__data['cmd'] = float(parsed_str[7])
             self.__data['vl']  = float(parsed_str[8])
             self.__data['vr']  = float(parsed_str[9])
