@@ -16,7 +16,28 @@ float getSupplyVoltage()
   return (static_cast<float>(ref)/1023.0) * shunt_multiplier * ref_voltage;
 }
 
-bool heartbeat_state = false;
+struct Params
+{
+  float kP = 5;
+  float kD = 0.25;
+  float kI = 0;
+};
+
+struct CurrentState
+{
+  float angle_ref = 0; // At some point this is going to be the control variable for the speed!
+
+  float error;
+  float d_error;
+  float i_error;
+
+  float cmd;
+
+  int16_t left_motor_speed;
+  int16_t right_motor_speed;
+
+  bool heartbeat_state = false;
+};
 
 MPU6050Wrapper mpu(2);
 
@@ -38,9 +59,6 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
-float angle_ref = 0; // At some point this is going to be the control variable for the speed!
-
-
 constexpr unsigned int fast_loop_rate_ms = 5;
 constexpr unsigned int slow_loop_rate_ms = 25;
 constexpr unsigned int comm_loop_rate_ms = 100;
@@ -52,11 +70,39 @@ unsigned long last_comm_exec = 0;
 unsigned long last_heartbeat_exec = 0;
 
 
-SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
-double error_integral = 0;
 
-void fastLoop(unsigned long T)
+void sendFeedback(const CurrentState& state, const Params& params)
 {
+  float voltage=getSupplyVoltage();
+
+  Serial.print(voltage);
+  Serial.print(" ");
+  Serial.print(params.kP);
+  Serial.print(" ");
+  Serial.print(params.kD);
+  Serial.print(" ");
+  Serial.print(params.kI);
+  Serial.print(" ");
+  Serial.print(state.error * 10);
+  Serial.print(" ");
+  Serial.print(state.d_error * 10);
+  Serial.print(" ");
+  Serial.print(state.i_error * 10);
+  Serial.print(" ");
+  Serial.print(state.cmd * 10);
+  Serial.print(" ");
+  Serial.print(state.left_motor_speed);
+  Serial.print(" ");
+  Serial.print(state.right_motor_speed);
+  Serial.println("");
+}
+
+SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
+
+void fastLoop(unsigned long T, CurrentState& state, Params& params)
+{
+  (void)params; // Not used here
+
   if (T < last_fast_exec + fast_loop_rate_ms)
   {
     return;
@@ -65,15 +111,11 @@ void fastLoop(unsigned long T)
 
   if (mpu.read())
   {
-    imu_filter.push(angle_ref - mpu.getRoll());
+    imu_filter.push(state.angle_ref - mpu.getRoll());
   }
 }
 
-float kP = 5;
-float kD = 0.25;
-float kI = 0;
-
-void slowLoop(unsigned long T)
+void slowLoop(unsigned long T, CurrentState& state, Params& params)
 {
   if (T < last_slow_exec + slow_loop_rate_ms)
   {
@@ -81,45 +123,20 @@ void slowLoop(unsigned long T)
   }
   last_slow_exec  = T;
 
-  double err = imu_filter.filter(0);
-  double err_diff = imu_filter.filter(1);
+  state.error = imu_filter.filter(0);
+  state.d_error = imu_filter.filter(1);
 
-  if (((error_integral > 0) && (err < 0)) || ((error_integral < 0) && (err > 0)) || (fabs(error_integral * kI) < 255.0))
+  if (((state.i_error > 0) && (state.error < 0)) || ((state.i_error < 0) && (state.error > 0)) || (fabs(state.i_error * params.kI) < 255.0))
   {
-    double err_delta = err*slow_loop_rate_ms/1000;
-    error_integral += err_delta;
+    state.i_error += state.error*slow_loop_rate_ms / 1000.0;
   }
 
-  float cmd = (-1) * (kP * err + kD * err_diff + kI * error_integral);
-  auto left_setspeed = left_motor.setSpeed(round(cmd));
-  auto right_setspeed = right_motor.setSpeed(round(cmd));
-
-  float voltage=getSupplyVoltage();
-
-  Serial.print(voltage);
-  Serial.print(" ");
-  Serial.print(kP);
-  Serial.print(" ");
-  Serial.print(kD);
-  Serial.print(" ");
-  Serial.print(kI * 10);
-  Serial.print(" ");
-  Serial.print(err * 10);
-  Serial.print(" ");
-  Serial.print(err_diff * 10);
-  Serial.print(" ");
-  Serial.print(error_integral * 10);
-  Serial.print(" ");
-  Serial.print(cmd * 10);
-  Serial.print(" ");
-  Serial.print(static_cast<float>(left_setspeed)*10/255);
-  Serial.print(" ");
-  Serial.print(static_cast<float>(right_setspeed)*10/255);
-
-  Serial.println("");
+  state.cmd = (-1) * (params.kP * state.error + params.kD * state.d_error + params.kI * state.i_error);
+  state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
+  state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
 }
 
-void commLoop(unsigned long T)
+void commLoop(unsigned long T, CurrentState& state, Params& params)
 {
   if (T < last_comm_exec + comm_loop_rate_ms)
   {
@@ -173,15 +190,17 @@ void commLoop(unsigned long T)
 
     if ((kp >= 0) && (kd >= 0) && (ki >= 0))
     {
-      kP = kp;
-      kD = kd;
-      kI = ki;
-      error_integral = 0;
+      params.kP = kp;
+      params.kD = kd;
+      params.kI = ki;
+      state.i_error = 0;
     }
   }
+
+  sendFeedback(state, params);
 }
 
-void heartbeatLoop(unsigned long T)
+void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
 {
   if (T < last_heartbeat_exec + heartbeat_loop_rate_ms)
   {
@@ -189,15 +208,21 @@ void heartbeatLoop(unsigned long T)
   }
   last_heartbeat_exec  = T;
 
-  heartbeat_state = !heartbeat_state;
-  digitalWrite(LED_BUILTIN, heartbeat_state);
+  (void)params; // Not used here
+
+  state.heartbeat_state = !state.heartbeat_state;
+  digitalWrite(LED_BUILTIN, state.heartbeat_state);
 }
+
+
+Params paramStore;
+CurrentState stateStore;
 
 void loop()
 {
   unsigned long now = millis();
-  fastLoop(now);
-  slowLoop(now);
-  commLoop(now);
-  heartbeatLoop(now);
+  fastLoop(now, stateStore, paramStore);
+  slowLoop(now, stateStore, paramStore);
+  commLoop(now, stateStore, paramStore);
+  heartbeatLoop(now, stateStore, paramStore);
 }
