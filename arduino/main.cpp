@@ -16,6 +16,7 @@ float getSupplyVoltage()
   return (static_cast<float>(ref)/1023.0) * shunt_multiplier * ref_voltage;
 }
 
+bool heartbeat_state = false;
 
 MPU6050Wrapper mpu(2);
 
@@ -34,6 +35,7 @@ void setup()
                   927);   // acc_z_offset
 
   pinMode(A0, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 float angle_ref = 0; // At some point this is going to be the control variable for the speed!
@@ -42,10 +44,12 @@ float angle_ref = 0; // At some point this is going to be the control variable f
 constexpr unsigned int fast_loop_rate_ms = 5;
 constexpr unsigned int slow_loop_rate_ms = 25;
 constexpr unsigned int comm_loop_rate_ms = 100;
+constexpr unsigned int heartbeat_loop_rate_ms = 500;
 
 unsigned long last_fast_exec = 0;
 unsigned long last_slow_exec = 0;
 unsigned long last_comm_exec = 0;
+unsigned long last_heartbeat_exec = 0;
 
 
 SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
@@ -177,10 +181,23 @@ void commLoop(unsigned long T)
   }
 }
 
+void heartbeatLoop(unsigned long T)
+{
+  if (T < last_heartbeat_exec + heartbeat_loop_rate_ms)
+  {
+    return;
+  }
+  last_heartbeat_exec  = T;
+
+  heartbeat_state = !heartbeat_state;
+  digitalWrite(LED_BUILTIN, heartbeat_state);
+}
+
 void loop()
 {
   unsigned long now = millis();
   fastLoop(now);
   slowLoop(now);
   commLoop(now);
+  heartbeatLoop(now);
 }
