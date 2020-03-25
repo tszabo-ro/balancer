@@ -22,12 +22,14 @@ class Communicator(threading.Thread):
         )
         self.__data = dict()
         self.__data_lock = threading.Condition()
+        self.__serial_lock = threading.Lock()
 
         self.__data['error'] = ''
 
     def run(self):
         while 1:
             try:
+                self.__serial_lock.acquire()
                 serial_data = re.sub('\r\n', '', self.ser.readline().decode())
                 parsed_str = parse('{} {} {} {} {} {} {} {} {} {}', serial_data)
             except KeyboardInterrupt:
@@ -35,6 +37,8 @@ class Communicator(threading.Thread):
             except Exception as e:
                 print("Failed to read from Serial: {}".format(e))
                 continue;
+            finally:
+                self.__serial_lock.release()
 
             if parsed_str is None:
                 continue
@@ -55,7 +59,7 @@ class Communicator(threading.Thread):
 
     def data(self):
         self.__data_lock.acquire()
-        if self.__data_lock.wait(0.1):
+        if self.__data_lock.wait(0.15):
             return_data = self.__data.copy()
 
             if self.__data['V'] < 11.4:
@@ -73,6 +77,16 @@ class Communicator(threading.Thread):
         self.__data_lock.release()
 
         return data_copy
+
+    def update(self, kp, kd, ki):
+        try:
+            self.__serial_lock.acquire()
+            print("Requested param update to: kp: {} kd: {} ki: {}".format(kp, kd, ki))
+            self.ser.write('{}/{}/{}/\r\n'.format(kp, kd, ki).encode())
+        except Exception as e:
+            print("Failed to write to serial: {}".format(e))
+        finally:
+            self.__serial_lock.release()
 
 
 app = Quart(__name__)
@@ -105,7 +119,7 @@ async def updateParams():
         kp = form['kp']
         kd = form['kd']
         ki = form['ki']
-        print("Requested param update to: kp: {} kd: {} ki: {}".format(kp, kd, ki))
+        comm.update(kp, kd, ki)
     except:
         print("Failed to parse {} as json".format(form_str))
 
