@@ -1,4 +1,5 @@
 <html>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script>
         const rad2deg = (val) => {
             return Math.round(val * 180 / Math.PI);
@@ -35,6 +36,27 @@
             websocket.onerror = function(evt) { console.log(evt) };
             websocket.onmessage = function(evt) { onMessage(evt) };
         }
+
+        const updateParams = () => {
+
+            axios.post('/set_params', {
+                kp : document.getElementById('kp_val').value,
+                kd : document.getElementById('kd_val').value,
+                ki : document.getElementById('ki_val').value
+            })
+            .then(function (response) {
+                console.log("Request ok");
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log("Request error");
+                console.log(error);
+            })
+            .then(function () {
+                console.log("Something happened here");
+            });
+
+        }
     </script>
     <body onload="onLoad()">
         <h1 id="error" style="color:red; text-align:center"></h1>
@@ -54,12 +76,6 @@
                     <td><b>I</b></td>
                 </tr>
                 <tr>
-                    <td><b>Gain</b></td>
-                    <td ><p id="kp"></p></td>
-                    <td ><p id="kd"></p></td>
-                    <td ><p id="ki"></p></td>
-                </tr>
-                <tr>
                     <td><b>Error</b></td>
                     <td ><p  id="ep"></p></td>
                     <td ><p  id="ed"></p></td>
@@ -77,6 +93,36 @@
                     <td colspan="2" ><p  id="vel_right"></p></td>
                 </tr>
             </table>
+
+            <form>
+                <table>
+                    <tr>
+                        <td></td>
+                        <td>kP</td>
+                        <td>kD</td>
+                        <td>kI</td>
+                    </tr>
+                    <tr>
+                        <td><b>Curret</b></td>
+                        <td ><p id="kp"></p></td>
+                        <td ><p id="kd"></p></td>
+                        <td ><p id="ki"></p></td>
+                    </tr>
+                    <tr>
+                        <td><b>Requested</b></td>
+                        <td><input type="text" id="kp_val" name="kp_val" size="3" /></td>
+                        <td><input type="text" id="kd_val" name="kd_val" size="3" /></td>
+                        <td><input type="text" id="ki_val" name="ki_val" size="3" /></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4">
+                            <input value="Submit" type="button" onclick="updateParams()">
+                            <!-- <input type="submit" value="Post"> -->
+                        </td>
+                    </tr>
+                </table>
+            </form>
+            <p id="feedback"></p>
         </center>
     </body>
 </html>
