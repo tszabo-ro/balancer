@@ -13,7 +13,8 @@ ARDMK_DIR         = $(PROJECT_DIR)/Arduino-Makefile
 
 ### ARDUINO_DIR
 ### Path to the Arduino application and resources directory.
-ARDUINO_DIR       = /usr/share/arduino
+#ARDUINO_DIR       = /usr/share/arduino
+ARDUINO_DIR       = /home/pi/arduino-1.8.12
 
 ### USER_LIB_PATH
 ### Path to where the your project's libraries are stored.
@@ -26,7 +27,13 @@ ARDUINO_LIBS = I2Cdev Wire MPU6050
 ### For Arduino IDE 1.6.x
 ### Both BOARD_TAG and BOARD_SUB are needed. They must be set to the board you are currently using. (i.e BOARD_TAG = uno, mega, etc. & BOARD_SUB = atmega2560, etc.)
 ### Note: for the Arduino Uno, only BOARD_TAG is mandatory and BOARD_SUB can be equal to anything
-BOARD_TAG         = pro5v328 
+
+#With the default (1.0.5) arduino version of Raspbian, this is the correct board.
+#BOARD_TAG         = pro5v328
+
+#With the newer arduino versions (1.6 +), the correct board tag is:
+BOARD_TAG         = diecimila              
+BOARD_SUB         = atmega328  
 
 ### MONITOR_PORT
 ### The port your board is connected to. Using an '*' tries all the ports and finds the right one. Choose one of the two.
