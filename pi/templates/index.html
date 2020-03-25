@@ -1,0 +1,71 @@
+<html>
+    <script>
+        const onMessage = (event) => {
+
+            data = JSON.parse(event.data);
+
+            document.getElementById("voltage").innerHTML = data.V;
+
+            document.getElementById("kp").innerHTML = data.kp;
+            document.getElementById("kd").innerHTML = data.kd;
+            document.getElementById("kp").innerHTML = data.ki;
+
+            document.getElementById("ep").innerHTML = data.e;
+            document.getElementById("ed").innerHTML = data.de;
+            document.getElementById("ei").innerHTML = data.ie;
+
+            document.getElementById("vel_left").innerHTML = data.vl;
+            document.getElementById("vel_right").innerHTML = data.vr;
+        }
+        function onLoad() {
+            var wsUri = "ws://192.168.123.122:8080/ws";
+            websocket = new WebSocket(wsUri);
+            websocket.onopen = function(evt) { console.log("WS open"); };
+            websocket.onclose = function(evt) { console.log("WS closed"); };
+            websocket.onerror = function(evt) { console.log(evt) };
+            websocket.onmessage = function(evt) { onMessage(evt) };
+        }
+    </script>
+    <body onload="onLoad()">
+        <center>
+            <table border="1">
+                <tr>
+                    <td colspan="2" >Voltage:</td>
+                    <td colspan="2" ><p id="voltage"></p></td>
+                </tr>
+                <tr>
+                    <td colspan="4">Data</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>P</td>
+                    <td>D</td>
+                    <td>I</td>
+                </tr>
+                <tr>
+                    <td>Gain</td>
+                    <td ><p id="kp"></p></td>
+                    <td ><p id="kd"></p></td>
+                    <td ><p id="ki"></p></td>
+                </tr>
+                <tr>
+                    <td>Error</td>
+                    <td ><p  id="ep"></p></td>
+                    <td ><p  id="ed"></p></td>
+                    <td ><p  id="ei"></p></td>
+                </tr>
+                <tr>
+                    <td colspan="4">Outputs</td>
+                </tr>
+                <tr>
+                    <td colspan="2" >Left Speed</td>
+                    <td colspan="2" >Right Speed</td>
+                </tr>
+                <tr>
+                    <td colspan="2" ><p  id="vel_left"></p></td>
+                    <td colspan="2" ><p  id="vel_right"></p></td>
+                </tr>
+            </table>
+        </center>
+    </body>
+</html>

@@ -6,7 +6,7 @@ import threading
 import json
 from parse import *
 
-from quart import Quart, websocket
+from quart import Quart, websocket, render_template
 
 
 class Communicator(threading.Thread):
@@ -73,7 +73,7 @@ async def ws():
 
 @app.route('/')
 async def index():
-    await return 'Hello World'
+    return await render_template("index.html")
 
 
 if __name__ == "__main__":
