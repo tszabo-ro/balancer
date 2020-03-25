@@ -51,7 +51,7 @@ namespace
   {
     Array<double, (2*m+1)> weights;
 
-    for (int i = 0; i < 2 * m + 1; ++i)
+    for (unsigned long i = 0; i < 2 * m + 1; ++i)
     {
       weights[i] = computeWeight(i - m, t, m, n, s);
     }
@@ -84,7 +84,7 @@ public:
       T result = 0;
       Array<double, 2*m_elements + 1>& coeff = coefficients[diff_order];
 
-      for (int i = 0; i < data.size(); ++i)
+      for (unsigned long i = 0; i < data.size(); ++i)
       {
         result += coeff[i] * data[i];
       }
