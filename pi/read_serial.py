@@ -23,6 +23,8 @@ class Communicator(threading.Thread):
         self.__data = dict()
         self.__data_lock = threading.Condition()
 
+        self.__data['error'] = ''
+
     def run(self):
         while 1:
             try:
@@ -53,13 +55,25 @@ class Communicator(threading.Thread):
     def data(self):
         self.__data_lock.acquire()
         if self.__data_lock.wait(0.1):
-            return self.__data.copy()
+            return_data = self.__data.copy()
         else:
-            return None
+            return_data = None
+
+        self.__data_lock.release()
+
+        return return_data
+
+    def lastData(self):
+        self.__data_lock.acquire()
+        data_copy = self.__data.copy()
+        self.__data_lock.release()
+
+        return data_copy
 
 
 app = Quart(__name__)
 comm = Communicator()
+
 
 @app.websocket('/ws')
 async def ws():
@@ -68,7 +82,9 @@ async def ws():
         if data is not None:
             await websocket.send(json.dumps(data))
         else:
-            await websocket.send('{\'error\': \'No data\'}')
+            fail_data = comm.lastData()
+            fail_data['error'] = 'No data received from HW.'
+            await websocket.send(json.dumps(fail_data))
 
 
 @app.route('/')
