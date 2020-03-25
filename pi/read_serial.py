@@ -6,7 +6,7 @@ import threading
 import json
 from parse import *
 
-from quart import Quart, websocket, render_template
+from quart import Quart, websocket, render_template, request
 
 
 class Communicator(threading.Thread):
@@ -92,6 +92,22 @@ async def ws():
 
 @app.route('/')
 async def index():
+    return await render_template("index.html")
+
+@app.route('/set_params', methods=['POST'])
+async def updateParams():
+    form_data = await request.data
+    form_str = form_data.decode()
+
+    try:
+        form = json.loads(form_str)
+        kp = form['kp']
+        kd = form['kd']
+        ki = form['ki']
+        print("Requested param update to: kp: {} kd: {} ki: {}".format(kp, kd, ki))
+    except:
+        print("Failed to parse {} as json".format(form_str))
+
     return await render_template("index.html")
 
 
