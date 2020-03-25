@@ -90,6 +90,10 @@ void slowLoop(unsigned long T)
   auto left_setspeed = left_motor.setSpeed(round(cmd));
   auto right_setspeed = right_motor.setSpeed(round(cmd));
 
+  float voltage=getSupplyVoltage();
+
+  Serial.print(voltage);
+  Serial.print(" ");
   Serial.print(kP);
   Serial.print(" ");
   Serial.print(kD);
