@@ -2,9 +2,11 @@
 import time
 import serial
 import re
-import threading 
+import threading
+import json
 from parse import *
 
+from quart import Quart, websocket
 
 
 class Communicator(threading.Thread):
@@ -20,7 +22,7 @@ class Communicator(threading.Thread):
         )
         self.__data = dict()
         self.__data_lock = threading.Condition()
-    
+
     def run(self):
         while 1:
             try:
@@ -56,10 +58,24 @@ class Communicator(threading.Thread):
             return None
 
 
+app = Quart(__name__)
 comm = Communicator()
-comm.start()
+
+@app.websocket('/ws')
+async def ws():
+    while True:
+        data = comm.data()
+        if data is not None:
+            await websocket.send(json.dumps(data))
+        else:
+            await websocket.send('{\'error\': \'No data\'}')
 
 
-while True:
-    print(comm.data());
+@app.route('/')
+async def index():
+    await return 'Hello World'
 
+
+if __name__ == "__main__":
+    comm.start()
+    app.run(host='0.0.0.0', port=8080)
