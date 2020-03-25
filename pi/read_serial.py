@@ -56,6 +56,9 @@ class Communicator(threading.Thread):
         self.__data_lock.acquire()
         if self.__data_lock.wait(0.1):
             return_data = self.__data.copy()
+
+            if self.__data['V'] < 11.4:
+                return_data['error'] = "Undervoltage!"
         else:
             return_data = None
 

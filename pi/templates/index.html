@@ -4,6 +4,8 @@
 
             data = JSON.parse(event.data);
 
+            document.getElementById("error").innerHTML = data.error;
+
             document.getElementById("voltage").innerHTML = data.V;
 
             document.getElementById("kp").innerHTML = data.kp;
@@ -27,6 +29,7 @@
         }
     </script>
     <body onload="onLoad()">
+        <h1 id="error" style="color:red; text-align:center"></h1>
         <center>
             <table border="1">
                 <tr>
