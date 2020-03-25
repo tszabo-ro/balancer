@@ -1,20 +1,28 @@
 <html>
     <script>
+        const rad2deg = (val) => {
+            return Math.round(val * 180 / Math.PI);
+        }
         const onMessage = (event) => {
 
             data = JSON.parse(event.data);
 
             document.getElementById("error").innerHTML = data.error;
 
-            document.getElementById("voltage").innerHTML = data.V;
+            if (data.V > 11.4) {
+                document.getElementById("voltage").innerHTML = data.V;
+            }
+            else {
+                document.getElementById("voltage").innerHTML = data.V;
+            }
 
             document.getElementById("kp").innerHTML = data.kp;
             document.getElementById("kd").innerHTML = data.kd;
-            document.getElementById("kp").innerHTML = data.ki;
+            document.getElementById("ki").innerHTML = data.ki;
 
-            document.getElementById("ep").innerHTML = data.e;
-            document.getElementById("ed").innerHTML = data.de;
-            document.getElementById("ei").innerHTML = data.ie;
+            document.getElementById("ep").innerHTML = rad2deg(data.e);
+            document.getElementById("ed").innerHTML = rad2deg(data.de);
+            document.getElementById("ei").innerHTML = rad2deg(data.ie);
 
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
@@ -33,36 +41,36 @@
         <center>
             <table border="1">
                 <tr>
-                    <td colspan="2" >Voltage:</td>
+                    <td colspan="2" ><b>Voltage:</b></td>
                     <td colspan="2" ><p id="voltage"></p></td>
                 </tr>
                 <tr>
-                    <td colspan="4">Data</td>
+                    <td colspan="4"><center><b>Data</b></center></td>
                 </tr>
                 <tr>
-                    <td></td>
-                    <td>P</td>
-                    <td>D</td>
-                    <td>I</td>
+                    <td><b></b></td>
+                    <td><b>P</b></td>
+                    <td><b>D</b></td>
+                    <td><b>I</b></td>
                 </tr>
                 <tr>
-                    <td>Gain</td>
+                    <td><b>Gain</b></td>
                     <td ><p id="kp"></p></td>
                     <td ><p id="kd"></p></td>
                     <td ><p id="ki"></p></td>
                 </tr>
                 <tr>
-                    <td>Error</td>
+                    <td><b>Error</b></td>
                     <td ><p  id="ep"></p></td>
                     <td ><p  id="ed"></p></td>
                     <td ><p  id="ei"></p></td>
                 </tr>
                 <tr>
-                    <td colspan="4">Outputs</td>
+                    <td colspan="4"><center><b>Outputs</b></center></td>
                 </tr>
                 <tr>
-                    <td colspan="2" >Left Speed</td>
-                    <td colspan="2" >Right Speed</td>
+                    <td colspan="2"><b>Left Speed</b></td>
+                    <td colspan="2"><b>Right Speed</b></td>
                 </tr>
                 <tr>
                     <td colspan="2" ><p  id="vel_left"></p></td>
