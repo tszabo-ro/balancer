@@ -31,8 +31,9 @@ class Communicator(threading.Thread):
                 serial_data = re.sub('\r\n', '', self.ser.readline().decode())
                 parsed_str = parse('{} {} {} {} {} {} {} {} {} {}', serial_data)
             except KeyboardInterrupt:
-                break;
-            except:
+                break
+            except Exception as e:
+                print("Failed to read from Serial: {}".format(e))
                 continue;
 
             if parsed_str is None:
