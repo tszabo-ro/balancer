@@ -1,11 +1,22 @@
+#include <Arduino.h>
 #include "include/Motor.h"
 
-Motor::Motor(int fwd_pin, int bck_pin, int max_output, int min_output)
+#include "include/Calibration.h"
+
+Motor::Motor(int fwd_pin, int bck_pin)
 : fwd_pin_(fwd_pin)
 , bck_pin_(bck_pin)
-, max_out_(max_output)
-, min_out_(min_output)
+, min_out_(0)
+, max_out_(255)
 {
+}
+
+int Motor::initialize(const MotorCalib& calib_data)
+{
+  max_out_ = calib_data.max_output;
+  min_out_ = calib_data.min_output;
+
+  return 0;
 }
 
 int16_t Motor::setSpeed(int16_t vel)

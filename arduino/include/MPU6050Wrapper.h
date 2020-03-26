@@ -1,9 +1,12 @@
 #ifndef MPU6050WRAPPER_H
 #define MPU6050WRAPPER_H
 
+#include <inttypes.h>
+
 extern volatile bool mpuInterrupt;
 
 struct MPU6050;
+struct GyroCalib;
 
 class MPU6050Wrapper
 {
@@ -12,8 +15,7 @@ public:
   // AD0 high = 0x69
   MPU6050Wrapper(int interrupt_pin, int mpu_id=0x68);
   ~MPU6050Wrapper();
-  int initialize(int gyro_x_offset, int gyro_y_offset, int gyro_z_offset,
-                  int acc_x_offset, int acc_y_offset, int acc_z_offset);
+  int initialize(const GyroCalib& calib_data);
 
   bool read();
 

@@ -15,7 +15,7 @@ ARDMK_DIR         = $(PROJECT_DIR)/Arduino-Makefile
 ### Path to the Arduino application and resources directory.
 ARDUINO_DIR       = /Applications/Arduino.app/Contents/Java
 
-ARDUINO_LIBS = I2Cdev Wire MPU6050
+ARDUINO_LIBS = I2Cdev Wire MPU6050 EEPROM
 
 ### USER_LIB_PATH
 ### Path to where the your project's libraries are stored.

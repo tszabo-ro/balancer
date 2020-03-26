@@ -4,6 +4,8 @@
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <Wire.h>
 
+#include "include/Calibration.h"
+
 volatile bool mpuInterrupt = false;
 
 // AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
@@ -25,13 +27,7 @@ MPU6050Wrapper::~MPU6050Wrapper()
 {
     // delete mpu; // <= Not supported by AVR?
 }
-
-int MPU6050Wrapper::initialize(int gyro_x_offset,
-                int gyro_y_offset,
-                int gyro_z_offset,
-                int acc_x_offset,
-                int acc_y_offset,
-                int acc_z_offset)
+int MPU6050Wrapper::initialize(const GyroCalib& calib_data)
 {
     mpu->initialize();
     pinMode(interrupt_pin, INPUT);
@@ -45,13 +41,13 @@ int MPU6050Wrapper::initialize(int gyro_x_offset,
     int dev_status = mpu->dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
-    mpu->setXGyroOffset(gyro_x_offset);
-    mpu->setYGyroOffset(gyro_y_offset);
-    mpu->setZGyroOffset(gyro_z_offset);
+    mpu->setXGyroOffset(calib_data.gyro_x_offset);
+    mpu->setYGyroOffset(calib_data.gyro_y_offset);
+    mpu->setZGyroOffset(calib_data.gyro_z_offset);
 
-    mpu->setXAccelOffset(acc_x_offset);
-    mpu->setYAccelOffset(acc_y_offset);
-    mpu->setZAccelOffset(acc_z_offset);
+    mpu->setXAccelOffset(calib_data.acc_x_offset);
+    mpu->setYAccelOffset(calib_data.acc_y_offset);
+    mpu->setZAccelOffset(calib_data.acc_z_offset);
 
     // make sure it worked (returns 0 if so)
     if (dev_status == 0)

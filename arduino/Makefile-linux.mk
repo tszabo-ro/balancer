@@ -19,7 +19,10 @@ ARDUINO_DIR       = /home/pi/arduino-1.8.12
 ### USER_LIB_PATH
 ### Path to where the your project's libraries are stored.
 USER_LIB_PATH     :=  $(realpath $(PROJECT_DIR)/lib)
-ARDUINO_LIBS = I2Cdev Wire MPU6050
+
+ARDUINO_LIBS = I2Cdev Wire MPU6050 EEPROM
+
+
 ### BOARD_TAG & BOARD_SUB
 ### For Arduino IDE 1.0.x
 ### Only BOARD_TAG is needed. It must be set to the board you are currently using. (i.e uno, mega2560, etc.)

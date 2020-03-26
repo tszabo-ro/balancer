@@ -1,5 +1,6 @@
 
 #include <Arduino.h>
+#include <EEPROM.h>
 
 #include "include/MPU6050Wrapper.h"
 #include "include/Motor.h"
@@ -8,22 +9,20 @@
 
 #include "include/filters/savitzky_golay.h"
 
+#include "include/Calibration.h"
+
 #define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
 
-float getSupplyVoltage()
-{
-  int ref = analogRead(A0);
-  constexpr float shunt_multiplier = 3.0;
-  constexpr float ref_voltage = 5.0;
-  return (static_cast<float>(ref)/1023.0) * shunt_multiplier * ref_voltage;
-}
 
-struct Params
-{
-  float kP = 5;
-  float kD = 0.25;
-  float kI = 0;
-};
+/////////////////////////////////////////////////////
+
+MPU6050Wrapper mpu(2);
+Motor left_motor(6, 9);
+Motor right_motor(10, 11);
+
+SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
+
+/////////////////////////////////////////////////////
 
 struct CurrentState
 {
@@ -55,26 +54,6 @@ struct CurrentState
   bool heartbeat_state;
 };
 
-MPU6050Wrapper mpu(2);
-
-Motor left_motor(6, 9, 254, 0);
-Motor right_motor(10, 11, 254, 0);
-
-void setup()
-{
-  Serial.begin(115200);
-  Serial.setTimeout(2);
-  mpu.initialize( -59,    // gyro_x_offset
-                  9,      // gyro_y_offset
-                  -30,    // gyro_z_offset
-                  -284,   // acc_x_offset
-                  -1123,  // acc_y_offset
-                  927);   // acc_z_offset
-
-  pinMode(A0, INPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
-}
-
 constexpr unsigned int fast_loop_rate_ms = 5;
 constexpr unsigned int slow_loop_rate_ms = 25;
 constexpr unsigned int comm_loop_rate_ms = 100;
@@ -85,7 +64,15 @@ unsigned long last_slow_exec = 0;
 unsigned long last_comm_exec = 0;
 unsigned long last_heartbeat_exec = 0;
 
+/////////////////////////////////////////////////////
 
+float getSupplyVoltage()
+{
+  int ref = analogRead(A0);
+  constexpr float shunt_multiplier = 3.0;
+  constexpr float ref_voltage = 5.0;
+  return (static_cast<float>(ref)/1023.0) * shunt_multiplier * ref_voltage;
+}
 
 void sendFeedback(CurrentState& state, const Params& params)
 {
@@ -114,8 +101,6 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.print(state.right_motor_speed);
   Serial.println("");
 }
-
-SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
 
 void fastLoop(unsigned long T, CurrentState& state, Params& params)
 {
@@ -220,6 +205,8 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
       params.kP = kp;
       params.kD = kd;
       params.kI = ki;
+
+      params.store();
       state.i_error = 0;
     }
   }
@@ -241,9 +228,35 @@ void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
   digitalWrite(LED_BUILTIN, state.heartbeat_state);
 }
 
+/////////////////////////////////////////////////////
 
-Params paramStore;
 CurrentState stateStore;
+StoredData eeprom_data;
+
+Params& paramStore = eeprom_data.params;
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.setTimeout(2);
+
+  // mpu.initialize( -59,    // gyro_x_offset
+  //                 9,      // gyro_y_offset
+  //                 -30,    // gyro_z_offset
+  //                 -284,   // acc_x_offset
+  //                 -1123,  // acc_y_offset
+  //                 927);   // acc_z_offset
+
+  DeviceCalibration& calibration = eeprom_data.calib;
+
+  mpu.initialize(calibration.gyro);
+
+  left_motor.initialize(calibration.l_motor);
+  right_motor.initialize(calibration.r_motor);
+
+  pinMode(A0, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+}
 
 void loop()
 {
