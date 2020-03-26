@@ -8,6 +8,8 @@
 
 #include "include/filters/savitzky_golay.h"
 
+#define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
+
 float getSupplyVoltage()
 {
   int ref = analogRead(A0);
@@ -25,6 +27,19 @@ struct Params
 
 struct CurrentState
 {
+  CurrentState()
+  : angle_ref(0)
+  , error(0)
+  , d_error(0)
+  , i_error(0)
+  , cmd(0)
+  , allowed_to_move(true)
+  , left_motor_speed(0)
+  , right_motor_speed(0)
+  , heartbeat_state(false)
+  {
+  }
+
   float angle_ref = 0; // At some point this is going to be the control variable for the speed!
 
   float error;
@@ -33,10 +48,11 @@ struct CurrentState
 
   float cmd;
 
+  bool allowed_to_move;
   int16_t left_motor_speed;
   int16_t right_motor_speed;
 
-  bool heartbeat_state = false;
+  bool heartbeat_state;
 };
 
 MPU6050Wrapper mpu(2);
@@ -71,9 +87,11 @@ unsigned long last_heartbeat_exec = 0;
 
 
 
-void sendFeedback(const CurrentState& state, const Params& params)
+void sendFeedback(CurrentState& state, const Params& params)
 {
   float voltage=getSupplyVoltage();
+
+  state.allowed_to_move = state.allowed_to_move && (voltage > MIN_ALLOWED_VOLTAGE_TO_DRIVE);
 
   Serial.print(voltage);
   Serial.print(" ");
@@ -122,6 +140,15 @@ void slowLoop(unsigned long T, CurrentState& state, Params& params)
     return;
   }
   last_slow_exec  = T;
+
+  if (!state.allowed_to_move)
+  {
+    state.i_error = 0;
+
+    state.left_motor_speed = left_motor.setSpeed(0);
+    state.right_motor_speed = right_motor.setSpeed(0);
+    return;
+  }
 
   state.error = imu_filter.filter(0);
   state.d_error = imu_filter.filter(1);
