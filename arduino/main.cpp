@@ -138,7 +138,7 @@ void slowLoop(unsigned long T, CurrentState& state, Params& params)
   state.error = imu_filter.filter(0);
   state.d_error = imu_filter.filter(1);
 
-  if (((state.i_error > 0) && (state.error < 0)) || ((state.i_error < 0) && (state.error > 0)) || (fabs(state.i_error * params.kI) < 255.0))
+  if (((state.i_error > 0) && (state.error < 0)) || ((state.i_error < 0) && (state.error > 0)) || (fabs(state.cmd) < 255.0))
   {
     state.i_error += state.error*slow_loop_rate_ms / 1000.0;
   }
