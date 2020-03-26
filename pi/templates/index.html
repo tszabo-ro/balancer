@@ -1,5 +1,7 @@
 <html>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js" ></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js"></script>
     <script>
         const rad2deg = (val) => {
             return Math.round(val * 180 / Math.PI);
@@ -27,14 +29,109 @@
 
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
+
+            const now = Date()
+
+            window.ws_data.push({
+              time: (now - window.lastStamp),
+              e: rad2deg(data.e),
+              de: rad2deg(data.de),
+              ie: rad2deg(data.ie),
+              vl: data.vl,
+              vr: data.vr
+            });
+            window.ws_data = (_).takeRight(window.ws_data, window.numPoints);
+
+            window.lastStamp = now;
+
+            window.chart.data.datasets = [
+                        {
+                            data: (_).map(window.ws_data, (_).property('e')),
+                            label: 'e',
+                            borderColor: "#F00",
+                            fill: false
+                        },
+                        {
+                            data: (_).map(window.ws_data, (_).property('de')),
+                            label: 'de',
+                            borderColor: "#0F0",
+                            fill: false
+                        },
+                        // {
+                        //     data: (_).map(window.ws_data, (_).property('ie')),
+                        //     label: 'ie',
+                        //     borderColor: "#00F",
+                        //     fill: false
+                        // },
+                        {
+                            data: (_).map(window.ws_data, (_).property('vl')),
+                            label: 'cmd_L',
+                            borderColor: "#0FF",
+                            fill: false
+                        },
+                        {
+                            data: (_).map(window.ws_data, (_).property('vr')),
+                            label: 'cmd_R',
+                            borderColor: "#F0F",
+                            fill: false
+                        },
+                    ]
+            window.chart.data.labels = (_).map(window.ws_data, (_).property('time'));
+
+            window.chart.update();
+
         }
+
         function onLoad() {
             var wsUri = "ws://192.168.123.122:8080/ws";
             websocket = new WebSocket(wsUri);
-            websocket.onopen = function(evt) { console.log("WS open"); };
+            websocket.onopen = function(evt) {
+              window.lastStamp = Date();
+              console.log("WS open");
+            };
             websocket.onclose = function(evt) { console.log("WS closed"); };
-            websocket.onerror = function(evt) { console.log(evt) };
+            // websocket.onerror = function(evt) { console.log(evt) };
             websocket.onmessage = function(evt) { onMessage(evt) };
+
+            window.numPoints = 50;
+            window.ws_data = [
+              {
+                time: 0,
+                e: 0,
+                de : 0,
+                ie : 0,
+                cmd_L: 0,
+                cmd_R: 0
+              },
+            ];
+
+            window.chart = new Chart(document.getElementById('chart'),
+              {
+                type: 'line',
+                data: {
+                    datasets: [
+                    ],
+                    labels: [0]
+                },
+                options: {
+                    animation: {
+                        duration: 0, // general animation time
+                    },
+                    hover: {
+                        animationDuration: 0, // duration of animations when hovering an item
+                    },
+                    responsiveAnimationDuration: 0, // animation duration after a resize
+
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                suggestedMin: -255,
+                                suggestedMax: 255
+                            }
+                        }]
+                    }
+                },
+            });
         }
 
         const updateParams = () => {
@@ -61,68 +158,74 @@
     <body onload="onLoad()">
         <h1 id="error" style="color:red; text-align:center"></h1>
         <center>
+        <table>
+            <tr>
+            <td>
             <table border="1">
                 <tr>
-                    <td colspan="2" ><b>Voltage:</b></td>
-                    <td colspan="2" ><p id="voltage"></p></td>
+                    <td align="center" colspan="2" ><b>Voltage:</b></td>
+                    <td align="center" colspan="2" ><p id="voltage"></p></td>
                 </tr>
                 <tr>
-                    <td colspan="4"><center><b>Data</b></center></td>
+                    <td align="center" colspan="4"><center><b>Data</b></center></td>
                 </tr>
                 <tr>
-                    <td><b></b></td>
-                    <td><b>P</b></td>
-                    <td><b>D</b></td>
-                    <td><b>I</b></td>
+                    <td align="center"><b></b></td>
+                    <td align="center"><b>P</b></td>
+                    <td align="center"><b>D</b></td>
+                    <td align="center"><b>I</b></td>
                 </tr>
                 <tr>
-                    <td><b>Error</b></td>
-                    <td ><p  id="ep"></p></td>
-                    <td ><p  id="ed"></p></td>
-                    <td ><p  id="ei"></p></td>
+                    <td align="center"><b>Error</b></td>
+                    <td align="center" ><p  id="ep"></p></td>
+                    <td align="center" ><p  id="ed"></p></td>
+                    <td align="center" ><p  id="ei"></p></td>
                 </tr>
                 <tr>
-                    <td colspan="4"><center><b>Outputs</b></center></td>
+                    <td align="center" colspan="4"><center><b>Outputs</b></center></td>
                 </tr>
                 <tr>
-                    <td colspan="2"><b>Left Speed</b></td>
-                    <td colspan="2"><b>Right Speed</b></td>
+                    <td align="center" colspan="2"><b>Left Speed</b></td>
+                    <td align="center" colspan="2"><b>Right Speed</b></td>
                 </tr>
                 <tr>
-                    <td colspan="2" ><p  id="vel_left"></p></td>
-                    <td colspan="2" ><p  id="vel_right"></p></td>
+                    <td align="center" colspan="2" ><p  id="vel_left"></p></td>
+                    <td align="center" colspan="2" ><p  id="vel_right"></p></td>
                 </tr>
             </table>
-
-            <form>
-                <table>
-                    <tr>
-                        <td></td>
-                        <td>kP</td>
-                        <td>kD</td>
-                        <td>kI</td>
-                    </tr>
-                    <tr>
-                        <td><b>Curret</b></td>
-                        <td ><p id="kp"></p></td>
-                        <td ><p id="kd"></p></td>
-                        <td ><p id="ki"></p></td>
-                    </tr>
-                    <tr>
-                        <td><b>Requested</b></td>
-                        <td><input type="text" id="kp_val" name="kp_val" size="3" /></td>
-                        <td><input type="text" id="kd_val" name="kd_val" size="3" /></td>
-                        <td><input type="text" id="ki_val" name="ki_val" size="3" /></td>
-                    </tr>
-                    <tr>
-                        <td colspan="4">
-                            <input value="Submit" type="button" onclick="updateParams()">
-                            <!-- <input type="submit" value="Post"> -->
-                        </td>
-                    </tr>
-                </table>
-            </form>
-            <p id="feedback"></p>
+            </td><td>
+            <table border="1">
+                <tr>
+                    <td align="center"></td>
+                    <td align="center"><b>kP</b></td>
+                    <td align="center"><b>kD</b></td>
+                    <td align="center"><b>kI</b></td>
+                </tr>
+                <tr>
+                    <td align="center"><b>Curret</b></td>
+                    <td align="center" ><p id="kp"></p></td>
+                    <td align="center" ><p id="kd"></p></td>
+                    <td align="center" ><p id="ki"></p></td>
+                </tr>
+                <tr>
+                    <td align="center"><b>Requested</b></td>
+                    <td align="center"><input type="text" id="kp_val" name="kp_val" size="5" /></td>
+                    <td align="center"><input type="text" id="kd_val" name="kd_val" size="5" /></td>
+                    <td align="center"><input type="text" id="ki_val" name="ki_val" size="5" /></td>
+                </tr>
+                <tr>
+                    <td align="center" colspan="4">
+                        <input value="Submit" type="button" onclick="updateParams()">
+                        <!-- <input type="submit" value="Post"> -->
+                    </td>
+                </tr>
+            </table>
+            </td>
+          </tr>
+          </table>
+          <p id="feedback"></p>
+          <br /><br />
+          <canvas id="chart" width="1600" height="400"></canvas>
         </center>
     </body>
 </html>
