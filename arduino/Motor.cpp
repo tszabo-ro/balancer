@@ -31,17 +31,17 @@ int16_t Motor::setSpeed(int16_t vel)
 
   vel = constrain(abs(vel), 0, max_out_);
 
-  if (vel < min_out_)
-  {
-    if (vel < min_out_ / 2)
-    {
-      vel = 0;
-    }
-    else
-    {
-      vel = min_out_;
-    }
-  }
+//  if (vel < min_out_)
+//  {
+//    if (vel < min_out_ / 2)
+//    {
+//      vel = 0;
+//    }
+//    else
+//    {
+//      vel = min_out_;
+//    }
+//  }
 
   uint8_t send_vel = static_cast<uint8_t>(vel);
 
