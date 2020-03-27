@@ -1,4 +1,6 @@
 #include "include/Calibration.h"
+
+#include <Arduino.h>
 #include <EEPROM.h>
 
 DeviceCalibration::DeviceCalibration(unsigned int start_address)
