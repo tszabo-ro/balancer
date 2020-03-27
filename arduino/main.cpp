@@ -27,7 +27,7 @@ SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with 
 struct CurrentState
 {
   CurrentState()
-  : angle_ref(0)
+  : angle_ref(-0.020)
   , error(0)
   , d_error(0)
   , i_error(0)
