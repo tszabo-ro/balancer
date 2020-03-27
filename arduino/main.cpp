@@ -21,6 +21,7 @@ Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
 //SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
+SavitzkyGolayFilter<double, 3, 3, 0> imu_filter(1);
 float Z0 = 0;
 float Z1 = 0;
 
@@ -118,7 +119,8 @@ void fastLoop(unsigned long T, CurrentState& state, Params& params)
   {
 	  Z1 = Z0;
 	  Z0 = state.angle_ref -mpu.getRoll();
-//    imu_filter.push(state.angle_ref - mpu.getRoll());
+
+    imu_filter.push(Z0);
   }
 }
 
@@ -139,8 +141,11 @@ void slowLoop(unsigned long T, CurrentState& state, Params& params)
     return;
   }
 
-  state.error = Z0;//imu_filter.filter(0);
-  state.d_error = Z0 - Z1;//imu_filter.filter(1);
+//  state.error = Z0;
+//  state.d_error = Z0 - Z1;
+
+  state.error = imu_filter.filter(0);
+  state.d_error = imu_filter.filter(1);
 
   if (((state.i_error > 0) && (state.error < 0)) || ((state.i_error < 0) && (state.error > 0)) || (fabs(state.i_error * params.kI) < 255.0))
   {
