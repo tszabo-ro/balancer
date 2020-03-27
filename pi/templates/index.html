@@ -23,9 +23,9 @@
             document.getElementById("kd").innerHTML = data.kd;
             document.getElementById("ki").innerHTML = data.ki;
 
-            document.getElementById("ep").innerHTML = rad2deg(data.e);
-            document.getElementById("ed").innerHTML = rad2deg(data.de);
-            document.getElementById("ei").innerHTML = rad2deg(data.ie);
+            document.getElementById("ep").innerHTML = rad2deg(data.e)* 20;
+            document.getElementById("ed").innerHTML = rad2deg(data.de)* 20;
+            document.getElementById("ei").innerHTML = rad2deg(data.ie) * 20;
 
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
@@ -57,12 +57,12 @@
                             borderColor: "#0F0",
                             fill: false
                         },
-                        // {
-                        //     data: (_).map(window.ws_data, (_).property('ie')),
-                        //     label: 'ie',
-                        //     borderColor: "#00F",
-                        //     fill: false
-                        // },
+                        {
+                            data: (_).map(window.ws_data, (_).property('ie')),
+                            label: 'ie',
+                            borderColor: "#00F",
+                            fill: false
+                        },
                         {
                             data: (_).map(window.ws_data, (_).property('vl')),
                             label: 'cmd_L',
@@ -83,7 +83,7 @@
         }
 
         function onLoad() {
-            var wsUri = "ws://192.168.123.122:8080/ws";
+            var wsUri = "ws://" + window.location.hostname + ":8080/ws";
             websocket = new WebSocket(wsUri);
             websocket.onopen = function(evt) {
               window.lastStamp = Date();
