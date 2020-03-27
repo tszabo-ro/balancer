@@ -27,13 +27,23 @@ float Z1 = 0;
 
 /////////////////////////////////////////////////////
 
+struct PIDState
+{
+  PIDState()
+  : error(0)
+  , d_error(0)
+  , i_error(0)
+  {}
+
+  float error;
+  float d_error;
+  float i_error;
+};
+
 struct CurrentState
 {
   CurrentState()
-  : angle_ref(-0.020)
-  , error(0)
-  , d_error(0)
-  , i_error(0)
+  : ref_angle(-0.020)
   , cmd(0)
   , allowed_to_move(true)
   , left_motor_speed(0)
@@ -42,11 +52,9 @@ struct CurrentState
   {
   }
 
-  float angle_ref = 0; // At some point this is going to be the control variable for the speed!
+  float ref_angle = 0; // At some point this is going to be the control variable for the speed!
 
-  float error;
-  float d_error;
-  float i_error;
+  PIDState angle;
 
   float cmd;
 
@@ -91,11 +99,11 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.print(" ");
   Serial.print(params.kI);
   Serial.print(" ");
-  Serial.print(state.error * 10);
+  Serial.print(state.angle.error * 10);
   Serial.print(" ");
-  Serial.print(state.d_error * 10);
+  Serial.print(state.angle.d_error * 10);
   Serial.print(" ");
-  Serial.print(state.i_error * 10);
+  Serial.print(state.angle.i_error * 10);
   Serial.print(" ");
   Serial.print(state.cmd * 10);
   Serial.print(" ");
@@ -118,7 +126,7 @@ void fastLoop(unsigned long T, CurrentState& state, Params& params)
   if (mpu.read())
   {
 	  Z1 = Z0;
-	  Z0 = state.angle_ref -mpu.getRoll();
+	  Z0 = state.ref_angle -mpu.getRoll();
 
     imu_filter.push(Z0);
   }
@@ -134,25 +142,25 @@ void slowLoop(unsigned long T, CurrentState& state, Params& params)
 
   if (!state.allowed_to_move)
   {
-    state.i_error = 0;
+    state.angle.i_error = 0;
 
     state.left_motor_speed = left_motor.setSpeed(0);
     state.right_motor_speed = right_motor.setSpeed(0);
     return;
   }
 
-//  state.error = Z0;
-//  state.d_error = Z0 - Z1;
+  //state.angle.error = Z0;
+  //state.angle.d_error = Z0 - Z1;
 
-  state.error = imu_filter.filter(0);
-  state.d_error = imu_filter.filter(1);
+  state.angle.error = imu_filter.filter(0);
+  state.angle.d_error = imu_filter.filter(1);
 
-  if (((state.i_error > 0) && (state.error < 0)) || ((state.i_error < 0) && (state.error > 0)) || (fabs(state.i_error * params.kI) < 255.0))
+  if (((state.angle.i_error > 0) && (state.angle.error < 0)) || ((state.angle.i_error < 0) && (state.angle.error > 0)) || (fabs(state.angle.i_error * params.kI) < 255.0))
   {
-    state.i_error += state.error*slow_loop_rate_ms / 1000.0;
+    state.angle.i_error += state.angle.error*slow_loop_rate_ms / 1000.0;
   }
 
-  state.cmd = (-1) * (params.kP * state.error + params.kD * state.d_error + params.kI * state.i_error);
+  state.cmd = (-1) * (params.kP * state.angle.error + params.kD * state.angle.d_error + params.kI * state.angle.i_error);
   state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
 }
@@ -216,7 +224,7 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
       params.kI = ki;
 
       params.store();
-      state.i_error = 0;
+      state.angle.i_error = 0;
     }
   }
 
