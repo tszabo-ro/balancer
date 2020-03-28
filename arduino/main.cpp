@@ -13,6 +13,10 @@
 
 #define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
 
+constexpr unsigned int imu_read_rate_ms = 5;
+constexpr unsigned int stabilizer_rate_ms = 25;
+constexpr unsigned int comm_loop_rate_ms = 100;
+constexpr unsigned int heartbeat_loop_rate_ms = 500;
 
 /////////////////////////////////////////////////////
 
@@ -20,10 +24,9 @@ MPU6050Wrapper mpu(2);
 Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
-//SavitzkyGolayFilter<double, 5, 3, 0> imu_filter(0.01); // This is the rate with which the IMU provides data
 SavitzkyGolayFilter<double, 3, 3, 0> imu_filter(1);
-float Z0 = 0;
-float Z1 = 0;
+//float Z0 = 0;
+//float Z1 = 0;
 
 /////////////////////////////////////////////////////
 
@@ -65,15 +68,6 @@ struct CurrentState
   bool heartbeat_state;
 };
 
-constexpr unsigned int fast_loop_rate_ms = 5;
-constexpr unsigned int slow_loop_rate_ms = 25;
-constexpr unsigned int comm_loop_rate_ms = 100;
-constexpr unsigned int heartbeat_loop_rate_ms = 500;
-
-unsigned long last_fast_exec = 0;
-unsigned long last_slow_exec = 0;
-unsigned long last_comm_exec = 0;
-unsigned long last_heartbeat_exec = 0;
 
 /////////////////////////////////////////////////////
 
@@ -113,15 +107,17 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.println("");
 }
 
-void fastLoop(unsigned long T, CurrentState& state, Params& params)
+unsigned long last_imu_read = 0;
+
+void imuReadLoop(unsigned long T, const CurrentState& state, const Params& params)
 {
   (void)params; // Not used here
 
-  if (T < last_fast_exec + fast_loop_rate_ms)
+  if (T < last_imu_read + imu_read_rate_ms)
   {
     return;
   }
-  last_fast_exec  = T;
+  last_imu_read  = T;
 
   if (mpu.read())
   {
@@ -132,13 +128,15 @@ void fastLoop(unsigned long T, CurrentState& state, Params& params)
   }
 }
 
-void slowLoop(unsigned long T, CurrentState& state, Params& params)
+unsigned long last_stabilizer_exec = 0;
+
+void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
 {
-  if (T < last_slow_exec + slow_loop_rate_ms)
+  if (T < last_stabilizer_exec + stabilizer_rate_ms)
   {
     return;
   }
-  last_slow_exec  = T;
+  last_stabilizer_exec  = T;
 
   if (!state.allowed_to_move)
   {
@@ -157,13 +155,15 @@ void slowLoop(unsigned long T, CurrentState& state, Params& params)
 
   if (((state.angle.i_error > 0) && (state.angle.error < 0)) || ((state.angle.i_error < 0) && (state.angle.error > 0)) || (fabs(state.angle.i_error * params.kI) < 255.0))
   {
-    state.angle.i_error += state.angle.error*slow_loop_rate_ms / 1000.0;
+    state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
   }
 
   state.cmd = (-1) * (params.kP * state.angle.error + params.kD * state.angle.d_error + params.kI * state.angle.i_error);
   state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
 }
+
+unsigned long last_comm_exec = 0;
 
 void commLoop(unsigned long T, CurrentState& state, Params& params)
 {
@@ -172,6 +172,8 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
     return;
   }
   last_comm_exec  = T;
+
+  sendFeedback(state, params);
 
   if (Serial.available() > 6)
   {
@@ -228,8 +230,9 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
     }
   }
 
-  sendFeedback(state, params);
 }
+
+unsigned long last_heartbeat_exec = 0;
 
 void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
 {
@@ -257,13 +260,6 @@ void setup()
   Serial.begin(115200);
   Serial.setTimeout(2);
 
-  // mpu.initialize( -59,    // gyro_x_offset
-  //                 9,      // gyro_y_offset
-  //                 -30,    // gyro_z_offset
-  //                 -284,   // acc_x_offset
-  //                 -1123,  // acc_y_offset
-  //                 927);   // acc_z_offset
-
   DeviceCalibration& calibration = eeprom_data.calib;
 
   mpu.initialize(calibration.gyro);
@@ -278,8 +274,8 @@ void setup()
 void loop()
 {
   unsigned long now = millis();
-  fastLoop(now, stateStore, paramStore);
-  slowLoop(now, stateStore, paramStore);
+  imuReadLoop(now, stateStore, paramStore);
+  stabilizerLoop(now, stateStore, paramStore);
   commLoop(now, stateStore, paramStore);
   heartbeatLoop(now, stateStore, paramStore);
 }
