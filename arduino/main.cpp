@@ -110,6 +110,20 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.print(state.left_motor_speed);
   Serial.print(" ");
   Serial.print(state.right_motor_speed);
+  Serial.print(" ");
+  Serial.print(params.outer.kP);
+  Serial.print(" ");
+  Serial.print(params.outer.kD);
+  Serial.print(" ");
+  Serial.print(params.outer.kI);
+  Serial.print(" ");
+  Serial.print(state.wheel_vel.error * 10);
+  Serial.print(" ");
+  Serial.print(state.wheel_vel.d_error * 10);
+  Serial.print(" ");
+  Serial.print(state.wheel_vel.i_error * 10);
+  Serial.print(" ");
+  Serial.print(state.ref_angle * 10);
   Serial.println("");
 }
 
