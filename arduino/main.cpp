@@ -8,6 +8,7 @@
 #include "include/primitives/array.h"
 
 #include "include/filters/savitzky_golay.h"
+#include "include/filters/moving_average.h"
 
 #include "include/Calibration.h"
 
@@ -27,6 +28,8 @@ Motor right_motor(10, 11);
 SavitzkyGolayFilter<double, 3, 3, 0> imu_filter(1);
 //float Z0 = 0;
 //float Z1 = 0;
+
+MovingAverage<20, float> wheel_vel_filter(0);
 
 /////////////////////////////////////////////////////
 
@@ -58,6 +61,7 @@ struct CurrentState
   float ref_angle = 0; // At some point this is going to be the control variable for the speed!
 
   PIDState angle;
+  PIDState wheel_vel;
 
   float cmd;
 
@@ -121,10 +125,10 @@ void imuReadLoop(unsigned long T, const CurrentState& state, const Params& param
 
   if (mpu.read())
   {
-	  Z1 = Z0;
-	  Z0 = state.ref_angle -mpu.getRoll();
+	 // Z1 = Z0;
+	 // Z0 = state.ref_angle -mpu.getRoll();
 
-    imu_filter.push(Z0);
+    imu_filter.push(state.ref_angle -mpu.getRoll());
   }
 }
 
@@ -159,6 +163,10 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   }
 
   state.cmd = (-1) * (params.kP * state.angle.error + params.kD * state.angle.d_error + params.kI * state.angle.i_error);
+
+  // Filter the command vel so that the required tilt angle can be set.
+  wheel_vel_filter.push(state.cmd);
+
   state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
 }
