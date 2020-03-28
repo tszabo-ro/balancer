@@ -35,14 +35,27 @@ struct DeviceCalibration
   void print() const;
 };
 
-struct Params
+struct PIDParams
 {
-  Params(unsigned int start_address);
+  PIDParams(unsigned int start_address);
   const unsigned int eeprom_address;
 
   float kP;
   float kD;
   float kI;
+
+  void load();
+  void store();
+  void print() const;
+};
+
+struct Params
+{
+  Params(unsigned int start_address);
+  const unsigned int eeprom_address;
+
+  PIDParams inner;
+  PIDParams outer;
 
   void load();
   void store();

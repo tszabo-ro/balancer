@@ -91,11 +91,11 @@ void sendFeedback(CurrentState& state, const Params& params)
 
   Serial.print(voltage);
   Serial.print(" ");
-  Serial.print(params.kP);
+  Serial.print(params.inner.kP);
   Serial.print(" ");
-  Serial.print(params.kD);
+  Serial.print(params.inner.kD);
   Serial.print(" ");
-  Serial.print(params.kI);
+  Serial.print(params.inner.kI);
   Serial.print(" ");
   Serial.print(state.angle.error * 10);
   Serial.print(" ");
@@ -157,12 +157,12 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   state.angle.error = imu_filter.filter(0);
   state.angle.d_error = imu_filter.filter(1);
 
-  if (((state.angle.i_error > 0) && (state.angle.error < 0)) || ((state.angle.i_error < 0) && (state.angle.error > 0)) || (fabs(state.angle.i_error * params.kI) < 255.0))
+  if (((state.angle.i_error > 0) && (state.angle.error < 0)) || ((state.angle.i_error < 0) && (state.angle.error > 0)) || (fabs(state.angle.i_error * params.inner.kI) < 255.0))
   {
     state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
   }
 
-  state.cmd = (-1) * (params.kP * state.angle.error + params.kD * state.angle.d_error + params.kI * state.angle.i_error);
+  state.cmd = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
 
   // Filter the command vel so that the required tilt angle can be set.
   wheel_vel_filter.push(state.cmd);
@@ -229,9 +229,9 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
 
     if ((kp >= 0) && (kd >= 0) && (ki >= 0))
     {
-      params.kP = kp;
-      params.kD = kd;
-      params.kI = ki;
+      params.inner.kP = kp;
+      params.inner.kD = kd;
+      params.inner.kI = ki;
 
       params.store();
       state.angle.i_error = 0;
