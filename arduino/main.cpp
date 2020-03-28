@@ -197,6 +197,33 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
 }
 
+
+void readParams(CurrentState& state, Params& params)
+{
+    String kp_str = Serial.readStringUntil('/');
+    String kd_str = Serial.readStringUntil('/');
+    String ki_str = Serial.readStringUntil('/');
+
+    if ( (kp_str.length() == 0) || (kd_str.length() == 0) || (ki_str.length() != 0) )
+    {
+      return;
+    }
+
+    float kp = kp_str.toFloat();
+    float kd = kd_str.toFloat();
+    float ki = ki_str.toFloat();
+
+    if ((kp >= 0) && (kd >= 0) && (ki >= 0))
+    {
+      params.inner.kP = kp;
+      params.inner.kD = kd;
+      params.inner.kI = ki;
+
+      params.store();
+      state.angle.i_error = 0;
+    }
+}
+
 unsigned long last_comm_exec = 0;
 
 void commLoop(unsigned long T, CurrentState& state, Params& params)
@@ -211,57 +238,13 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
 
   if (Serial.available() > 6)
   {
-    float kp = -1;
-    float kd = -1;
-    float ki = -1;
-
-    String kp_str = Serial.readStringUntil('/');
-    Serial.println(kp_str.length());
-    if (kp_str.length() != 0) // The terminating \n is one char!
-    {
-      kp = kp_str.toFloat();
-
-      String kd_str = Serial.readStringUntil('/');
-      Serial.println(kd_str.length());
-      if (kd_str.length() != 0)
-      {
-        kd = kd_str.toFloat();
-
-        String ki_str = Serial.readStringUntil('/');
-        Serial.println(ki_str.length());
-        if (ki_str.length() != 0)
-        {
-          ki = ki_str.toFloat();
-        }
-        else
-        {
-          kp = -1; kd = -1; ki = -1;
-        }
-      }
-      else
-      {
-        kp = -1; kd = -1; ki = -1;
-      }
-    }
-    else
-    {
-      kp = -1; kd = -1; ki = -1;
-    }
+    readParams(state, params);
 
     while (Serial.available())
     {
       Serial.read();
     }
 
-    if ((kp >= 0) && (kd >= 0) && (ki >= 0))
-    {
-      params.inner.kP = kp;
-      params.inner.kD = kd;
-      params.inner.kI = ki;
-
-      params.store();
-      state.angle.i_error = 0;
-    }
   }
 
 }
