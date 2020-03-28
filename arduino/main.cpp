@@ -200,6 +200,26 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
 
 void readParams(CurrentState& state, Params& params)
 {
+    String indicator_str = Serial.readStringUntil('/');
+
+    if (indicator_str.length() != 1)
+    {
+      return;
+    }
+
+    PIDParams *controller_params = &params.inner;
+    PIDState *controller_state = &state.angle;
+
+    if (indicator_str == "o")
+    {
+      controller_params = &params.outer;
+      controller_state = &state.wheel_vel;
+    }
+    else if (indicator_str != "i")
+    {
+      return;
+    }
+
     String kp_str = Serial.readStringUntil('/');
     String kd_str = Serial.readStringUntil('/');
     String ki_str = Serial.readStringUntil('/');
@@ -215,12 +235,12 @@ void readParams(CurrentState& state, Params& params)
 
     if ((kp >= 0) && (kd >= 0) && (ki >= 0))
     {
-      params.inner.kP = kp;
-      params.inner.kD = kd;
-      params.inner.kI = ki;
+      controller_params->kP = kp;
+      controller_params->kD = kd;
+      controller_params->kI = ki;
 
-      params.store();
-      state.angle.i_error = 0;
+      controller_params->store();
+      controller_state->i_error = 0;
     }
 }
 

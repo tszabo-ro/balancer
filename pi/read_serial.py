@@ -78,11 +78,11 @@ class Communicator(threading.Thread):
 
         return data_copy
 
-    def update(self, kp, kd, ki):
+    def update_inner(self, kp, kd, ki):
         try:
             self.__serial_lock.acquire()
             print("Requested param update to: kp: {} kd: {} ki: {}".format(kp, kd, ki))
-            self.ser.write('{}/{}/{}/\r\n'.format(kp, kd, ki).encode())
+            self.ser.write('i/{}/{}/{}/\r\n'.format(kp, kd, ki).encode())
         except Exception as e:
             print("Failed to write to serial: {}".format(e))
         finally:
@@ -119,7 +119,7 @@ async def updateParams():
         kp = form['kp']
         kd = form['kd']
         ki = form['ki']
-        comm.update(kp, kd, ki)
+        comm.update_inner(kp, kd, ki)
     except:
         print("Failed to parse {} as json".format(form_str))
 
