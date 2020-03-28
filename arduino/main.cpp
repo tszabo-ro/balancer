@@ -15,7 +15,10 @@
 #define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
 
 constexpr unsigned int imu_read_rate_ms = 5;
+
 constexpr unsigned int stabilizer_rate_ms = 25;
+constexpr unsigned int velocity_rate_ms = 200;
+
 constexpr unsigned int comm_loop_rate_ms = 100;
 constexpr unsigned int heartbeat_loop_rate_ms = 500;
 
@@ -29,7 +32,7 @@ SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
 //float Z0 = 0;
 //float Z1 = 0;
 
-MovingAverage<20, float> wheel_vel_filter(0);
+SavitzkyGolayFilter<double, 2, 3, 0> wheel_vel_filter(1);
 
 /////////////////////////////////////////////////////
 
@@ -58,11 +61,10 @@ struct CurrentState
   {
   }
 
-  float ref_angle = 0; // At some point this is going to be the control variable for the speed!
-
   PIDState angle;
   PIDState wheel_vel;
 
+  float ref_angle = 0; // At some point this is going to be the control variable for the speed!
   float cmd;
 
   bool allowed_to_move;
@@ -130,6 +132,30 @@ void imuReadLoop(unsigned long T, const CurrentState& state, const Params& param
 
     imu_filter.push(state.ref_angle -mpu.getRoll());
   }
+}
+
+unsigned long last_velocity_exec = 0;
+
+void  velocityLoop(unsigned long T, CurrentState &state, const Params& params)
+{
+  if (T < last_velocity_exec + velocity_rate_ms)
+  {
+    return;
+  }
+  last_velocity_exec = T;
+
+  state.wheel_vel.error = wheel_vel_filter.filter(0);
+  state.wheel_vel.d_error = wheel_vel_filter.filter(1);
+
+  constexpr float max_tilt_angle = 4 * M_PI/180;
+
+  if (((state.wheel_vel.i_error > 0) && (state.wheel_vel.error < 0)) || ((state.wheel_vel.i_error < 0) && (state.wheel_vel.error > 0)) || (fabs(state.wheel_vel.i_error * params.outer.kI) < max_tilt_angle))
+  {
+    state.wheel_vel.i_error += state.wheel_vel.error * velocity_rate_ms / 1000.0;
+  }
+
+  state.ref_angle = (-1) * (params.outer.kP * state.wheel_vel.error + params.outer.kD * state.wheel_vel.d_error + params.outer.kI * state.wheel_vel.i_error);
+
 }
 
 unsigned long last_stabilizer_exec = 0;
@@ -283,7 +309,10 @@ void loop()
 {
   unsigned long now = millis();
   imuReadLoop(now, stateStore, paramStore);
+
   stabilizerLoop(now, stateStore, paramStore);
+  velocityLoop(now, stateStore, paramStore);
+
   commLoop(now, stateStore, paramStore);
   heartbeatLoop(now, stateStore, paramStore);
 }
