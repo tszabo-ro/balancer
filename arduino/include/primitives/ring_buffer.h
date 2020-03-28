@@ -23,14 +23,16 @@ public:
         return buffer_size;
     }
 
-    void push_back(T value)
+    T push_back(T value)
     {
+        T last_val = data_[start_];
         data_[start_++] = value;
 
         if (start_ >= buffer_size)
         {
             start_ = 0;
         }
+        return last_val;
     }
 
     T& operator[](unsigned long index)
@@ -41,6 +43,24 @@ public:
     const T& operator[](unsigned long index) const
     {
         return data_[indexToPos(index)];
+    }
+
+    T& front()
+    {
+      return data_[start_];
+    }
+    const T& front() const
+    {
+      return data_[start_];
+    }
+
+    T& back()
+    {
+      return data_[indexiToPos(buffer_size - 1)];
+    }
+    const T& back() const
+    {
+      return data_[indexiToPos(buffer_size - 1)];
     }
 
 private:
