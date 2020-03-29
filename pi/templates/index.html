@@ -19,13 +19,13 @@
                 document.getElementById("voltage").innerHTML = data.V;
             }
 
-            document.getElementById("kp").innerHTML = data.kp;
-            document.getElementById("kd").innerHTML = data.kd;
-            document.getElementById("ki").innerHTML = data.ki;
+            document.getElementById("i_kp").innerHTML = data.i_kp;
+            document.getElementById("i_kd").innerHTML = data.i_kd;
+            document.getElementById("i_ki").innerHTML = data.i_ki;
 
-            document.getElementById("ep").innerHTML = rad2deg(data.e)* 20;
-            document.getElementById("ed").innerHTML = rad2deg(data.de)* 20;
-            document.getElementById("ei").innerHTML = rad2deg(data.ie) * 20;
+            document.getElementById("i_ep").innerHTML = rad2deg(data.i_e)* 20;
+            document.getElementById("i_ed").innerHTML = rad2deg(data.i_de)* 20;
+            document.getElementById("i_ei").innerHTML = rad2deg(data.i_ie) * 20;
 
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
@@ -134,12 +134,33 @@
             });
         }
 
-        const updateParams = () => {
+        const updateInnerParams = () => {
 
-            axios.post('/set_params', {
-                kp : document.getElementById('kp_val').value,
-                kd : document.getElementById('kd_val').value,
-                ki : document.getElementById('ki_val').value
+            axios.post('/set_inner_params', {
+                kp : document.getElementById('i_kp_val').value,
+                kd : document.getElementById('i_kd_val').value,
+                ki : document.getElementById('i_ki_val').value
+            })
+            .then(function (response) {
+                console.log("Request ok");
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log("Request error");
+                console.log(error);
+            })
+            .then(function () {
+                console.log("Something happened here");
+            });
+
+        }
+
+        const updateOuterIParams = () => {
+
+            axios.post('/set_outer_params', {
+                kp : document.getElementById('o_kp_val').value,
+                kd : document.getElementById('o_kd_val').value,
+                ki : document.getElementById('o_ki_val').value
             })
             .then(function (response) {
                 console.log("Request ok");
@@ -176,10 +197,16 @@
                     <td align="center"><b>I</b></td>
                 </tr>
                 <tr>
-                    <td align="center"><b>Error</b></td>
-                    <td align="center" ><p  id="ep"></p></td>
-                    <td align="center" ><p  id="ed"></p></td>
-                    <td align="center" ><p  id="ei"></p></td>
+                    <td align="center"><b>Inner</b></td>
+                    <td align="center" ><p  id="i_ep"></p></td>
+                    <td align="center" ><p  id="i_ed"></p></td>
+                    <td align="center" ><p  id="i_ei"></p></td>
+                </tr>
+                <tr>
+                    <td align="center"><b>Outer</b></td>
+                    <td align="center" ><p  id="o_ep"></p></td>
+                    <td align="center" ><p  id="o_ed"></p></td>
+                    <td align="center" ><p  id="o_ei"></p></td>
                 </tr>
                 <tr>
                     <td align="center" colspan="4"><center><b>Outputs</b></center></td>
@@ -196,6 +223,11 @@
             </td><td>
             <table border="1">
                 <tr>
+                  <td align="center" colspan="4">
+                    <b>Inner Loop</b>
+                  </td>
+                </tr>
+                <tr>
                     <td align="center"></td>
                     <td align="center"><b>kP</b></td>
                     <td align="center"><b>kD</b></td>
@@ -203,23 +235,56 @@
                 </tr>
                 <tr>
                     <td align="center"><b>Curret</b></td>
-                    <td align="center" ><p id="kp"></p></td>
-                    <td align="center" ><p id="kd"></p></td>
-                    <td align="center" ><p id="ki"></p></td>
+                    <td align="center" ><p id="i_kp"></p></td>
+                    <td align="center" ><p id="i_kd"></p></td>
+                    <td align="center" ><p id="i_ki"></p></td>
                 </tr>
                 <tr>
                     <td align="center"><b>Requested</b></td>
-                    <td align="center"><input type="text" id="kp_val" name="kp_val" size="5" /></td>
-                    <td align="center"><input type="text" id="kd_val" name="kd_val" size="5" /></td>
-                    <td align="center"><input type="text" id="ki_val" name="ki_val" size="5" /></td>
+                    <td align="center"><input type="text" id="i_kp_val" name="i_kp_val" size="5" /></td>
+                    <td align="center"><input type="text" id="i_kd_val" name="i_kd_val" size="5" /></td>
+                    <td align="center"><input type="text" id="i_ki_val" name="i_ki_val" size="5" /></td>
                 </tr>
                 <tr>
                     <td align="center" colspan="4">
-                        <input value="Submit" type="button" onclick="updateParams()">
+                        <input value="Submit" type="button" onclick="updateInnerParams()">
                         <!-- <input type="submit" value="Post"> -->
                     </td>
                 </tr>
             </table>
+            </td><td>
+            <table border="1">
+                <tr>
+                  <td align="center" colspan="4">
+                    <b>Outter Loop</b>
+                  </td>
+                </tr>
+                <tr>
+                    <td align="center"></td>
+                    <td align="center"><b>kP</b></td>
+                    <td align="center"><b>kD</b></td>
+                    <td align="center"><b>kI</b></td>
+                </tr>
+                <tr>
+                    <td align="center"><b>Curret</b></td>
+                    <td align="center" ><p id="o_kp"></p></td>
+                    <td align="center" ><p id="o_kd"></p></td>
+                    <td align="center" ><p id="o_ki"></p></td>
+                </tr>
+                <tr>
+                    <td align="center"><b>Requested</b></td>
+                    <td align="center"><input type="text" id="o_kp_val" name="o_kp_val" size="5" /></td>
+                    <td align="center"><input type="text" id="o_kd_val" name="o_kd_val" size="5" /></td>
+                    <td align="center"><input type="text" id="o_ki_val" name="o_ki_val" size="5" /></td>
+                </tr>
+                <tr>
+                    <td align="center" colspan="4">
+                        <input value="Submit" type="button" onclick="updateOuterParams()">
+                        <!-- <input type="submit" value="Post"> -->
+                    </td>
+                </tr>
+            </table>
+ 
             </td>
           </tr>
           </table>

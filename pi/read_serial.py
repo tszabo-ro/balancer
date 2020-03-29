@@ -31,7 +31,7 @@ class Communicator(threading.Thread):
             try:
                 self.__serial_lock.acquire()
                 serial_data = re.sub('\r\n', '', self.ser.readline().decode())
-                parsed_str = parse('{} {} {} {} {} {} {} {} {} {}', serial_data)
+                parsed_str = parse('{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}', serial_data)
             except KeyboardInterrupt:
                 break
             except Exception as e:
@@ -44,16 +44,24 @@ class Communicator(threading.Thread):
                 continue
 
             self.__data_lock.acquire()
-            self.__data['V']   = float(parsed_str[0])
-            self.__data['kp']  = float(parsed_str[1])
-            self.__data['kd']  = float(parsed_str[2])
-            self.__data['ki']  = float(parsed_str[3])
-            self.__data['e']   = float(parsed_str[4])/10
-            self.__data['de']  = float(parsed_str[5])/10
-            self.__data['ie']  = float(parsed_str[6])/10
-            self.__data['cmd'] = float(parsed_str[7])
-            self.__data['vl']  = float(parsed_str[8])
-            self.__data['vr']  = float(parsed_str[9])
+            self.__data['V']     = float(parsed_str[0])
+            self.__data['i_kp']  = float(parsed_str[1])
+            self.__data['i_kd']  = float(parsed_str[2])
+            self.__data['i_ki']  = float(parsed_str[3])
+            self.__data['i_e']   = float(parsed_str[4])/10
+            self.__data['i_de']  = float(parsed_str[5])/10
+            self.__data['i_ie']  = float(parsed_str[6])/10
+            self.__data['cmd']   = float(parsed_str[7])
+            self.__data['vl']    = float(parsed_str[8])
+            self.__data['vr']    = float(parsed_str[9])
+            self.__data['o_kp']  = float(parsed_str[10])
+            self.__data['o_kd']  = float(parsed_str[11])
+            self.__data['o_ki']  = float(parsed_str[12])
+            self.__data['o_e']   = float(parsed_str[13])/10
+            self.__data['o_de']  = float(parsed_str[14])/10
+            self.__data['o_ie']  = float(parsed_str[15])/10
+            self.__data['a_ref'] = float(parsed_str[16])/10
+
             self.__data_lock.notifyAll()
             self.__data_lock.release()
 
@@ -109,8 +117,8 @@ async def ws():
 async def index():
     return await render_template("index.html")
 
-@app.route('/set_params', methods=['POST'])
-async def updateParams():
+@app.route('/set_inner_params', methods=['POST'])
+async def updateInnerParams():
     form_data = await request.data
     form_str = form_data.decode()
 
@@ -120,6 +128,23 @@ async def updateParams():
         kd = form['kd']
         ki = form['ki']
         comm.update_inner(kp, kd, ki)
+    except:
+        print("Failed to parse {} as json".format(form_str))
+
+    return await render_template("index.html")
+
+
+@app.route('/set_outer_params', methods=['POST'])
+async def updateOuterParams():
+    form_data = await request.data
+    form_str = form_data.decode()
+
+    try:
+        form = json.loads(form_str)
+        kp = form['kp']
+        kd = form['kd']
+        ki = form['ki']
+        comm.update_outer(kp, kd, ki)
     except:
         print("Failed to parse {} as json".format(form_str))
 
