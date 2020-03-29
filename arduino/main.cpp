@@ -204,8 +204,10 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
 
   state.cmd = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
 
+  float vel = constrain(state.cmd, -255.0, 255.0);
+
   // Filter the command vel so that the required tilt angle can be set.
-  wheel_vel_filter.push(state.cmd);
+  wheel_vel_filter.push(state.cmd/255);
 
   state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
