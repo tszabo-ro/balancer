@@ -29,9 +29,6 @@ Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
 SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
-//float Z0 = 0;
-//float Z1 = 0;
-
 SavitzkyGolayFilter<double, 2, 3, 0> wheel_vel_filter(1);
 
 /////////////////////////////////////////////////////
@@ -141,9 +138,6 @@ void imuReadLoop(unsigned long T, const CurrentState& state, const Params& param
 
   if (mpu.read())
   {
-	 // Z1 = Z0;
-	 // Z0 = state.ref_angle -mpu.getRoll();
-
     imu_filter.push(state.ref_angle -mpu.getRoll());
   }
 }
@@ -191,9 +185,6 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
     return;
   }
 
-  //state.angle.error = Z0;
-  //state.angle.d_error = Z0 - Z1;
-
   state.angle.error = imu_filter.filter(0);
   state.angle.d_error = imu_filter.filter(1);
 
@@ -238,7 +229,7 @@ void readParams(CurrentState& state, Params& params)
     String kd_str = Serial.readStringUntil('/');
     String ki_str = Serial.readStringUntil('/');
 
-    if ( (kp_str.length() == 0) || (kd_str.length() == 0) || (ki_str.length() != 0) )
+    if ( (kp_str.length() == 0) || (kd_str.length() == 0) || (ki_str.length() == 0) )
     {
       return;
     }
@@ -278,7 +269,6 @@ void commLoop(unsigned long T, CurrentState& state, Params& params)
     {
       Serial.read();
     }
-
   }
 
 }
