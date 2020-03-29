@@ -43,26 +43,49 @@ class Communicator(threading.Thread):
             if parsed_str is None:
                 continue
 
-            self.__data_lock.acquire()
-            self.__data['V']     = float(parsed_str[0])
-            self.__data['i_kp']  = float(parsed_str[1])
-            self.__data['i_kd']  = float(parsed_str[2])
-            self.__data['i_ki']  = float(parsed_str[3])
-            self.__data['i_e']   = float(parsed_str[4])/10
-            self.__data['i_de']  = float(parsed_str[5])/10
-            self.__data['i_ie']  = float(parsed_str[6])/10
-            self.__data['cmd']   = float(parsed_str[7])
-            self.__data['vl']    = float(parsed_str[8])
-            self.__data['vr']    = float(parsed_str[9])
-            self.__data['o_kp']  = float(parsed_str[10])
-            self.__data['o_kd']  = float(parsed_str[11])
-            self.__data['o_ki']  = float(parsed_str[12])
-            self.__data['o_e']   = float(parsed_str[13])/10
-            self.__data['o_de']  = float(parsed_str[14])/10
-            self.__data['o_ie']  = float(parsed_str[15])/10
-            self.__data['a_ref'] = float(parsed_str[16])/10
+            try:
+                V     = float(parsed_str[0])
+                i_kp  = float(parsed_str[1])
+                i_kd  = float(parsed_str[2])
+                i_ki  = float(parsed_str[3])
+                i_e   = float(parsed_str[4])/10
+                i_de  = float(parsed_str[5])/10
+                i_ie  = float(parsed_str[6])/10
+                cmd   = float(parsed_str[7])
+                vl    = float(parsed_str[8])
+                vr    = float(parsed_str[9])
+                o_kp  = float(parsed_str[10])
+                o_kd  = float(parsed_str[11])
+                o_ki  = float(parsed_str[12])
+                o_e   = float(parsed_str[13])/10
+                o_de  = float(parsed_str[14])/10
+                o_ie  = float(parsed_str[15])/10
+                a_ref = float(parsed_str[16])/10
+                self.__data_lock.acquire()
+                self.__data['V']     = V
+                self.__data['i_kp']  = i_kp
+                self.__data['i_kd']  = i_kd
+                self.__data['i_ki']  = i_ki
+                self.__data['i_e']   = i_e
+                self.__data['i_de']  = i_de
+                self.__data['i_ie']  = i_ie
+                self.__data['cmd']   = cmd
+                self.__data['vl']    = vl
+                self.__data['vr']    = vr
+                self.__data['o_kp']  = o_kp
+                self.__data['o_kd']  = o_kd
+                self.__data['o_ki']  = o_ki
+                self.__data['o_e']   = o_e
+                self.__data['o_de']  = o_de
+                self.__data['o_ie']  = o_ie
+                self.__data['a_ref'] = a_ref
 
-            self.__data_lock.notifyAll()
+                self.__data_lock.notifyAll()
+
+            except Exception as e:
+                print("Failed to parse the incoming data: {}".format(e))
+                continue
+
             self.__data_lock.release()
 
     def data(self):
