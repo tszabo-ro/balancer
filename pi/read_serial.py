@@ -96,6 +96,16 @@ class Communicator(threading.Thread):
         finally:
             self.__serial_lock.release()
 
+    def update_outer(self, kp, kd, ki):
+        try:
+            self.__serial_lock.acquire()
+            print("Requested param update to: kp: {} kd: {} ki: {}".format(kp, kd, ki))
+            self.ser.write('o/{}/{}/{}/\r\n'.format(kp, kd, ki).encode())
+        except Exception as e:
+            print("Failed to write to serial: {}".format(e))
+        finally:
+            self.__serial_lock.release()
+
 
 app = Quart(__name__)
 comm = Communicator()
@@ -145,8 +155,8 @@ async def updateOuterParams():
         kd = form['kd']
         ki = form['ki']
         comm.update_outer(kp, kd, ki)
-    except:
-        print("Failed to parse {} as json".format(form_str))
+    except Exception as e:
+        print("Failed to parse {} as json: {}".format(form_str, e))
 
     return await render_template("index.html")
 
