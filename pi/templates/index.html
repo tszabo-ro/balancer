@@ -30,7 +30,17 @@
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
 
-            const now = Date()
+            document.getElementById("o_kp").innerHTML = data.o_kp;
+            document.getElementById("o_kd").innerHTML = data.o_kd;
+            document.getElementById("o_ki").innerHTML = data.o_ki;
+
+            document.getElementById("o_ep").innerHTML = rad2deg(data.o_e)* 20;
+            document.getElementById("o_ed").innerHTML = rad2deg(data.o_de)* 20;
+            document.getElementById("o_ei").innerHTML = rad2deg(data.o_ie) * 20;
+
+            document.getElementById("a_ref").innerHTML = rad2deg(data.a_ref) * 100;
+
+             const now = Date()
 
             window.ws_data.push({
               time: (now - window.lastStamp),
@@ -155,7 +165,7 @@
 
         }
 
-        const updateOuterIParams = () => {
+        const updateOuterParams = () => {
 
             axios.post('/set_outer_params', {
                 kp : document.getElementById('o_kp_val').value,
@@ -180,6 +190,9 @@
         <h1 id="error" style="color:red; text-align:center"></h1>
         <center>
         <table>
+           <tr>
+             <td colspan="2"><b>Ref angle:</b> <p id="a_ref"></p></td>
+           </tr> 
             <tr>
             <td>
             <table border="1">
