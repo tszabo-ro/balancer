@@ -25,7 +25,7 @@ MPU6050Wrapper mpu(2);
 Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
-SavitzkyGolayFilter<double, 3, 3, 0> imu_filter(1);
+SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
 //float Z0 = 0;
 //float Z1 = 0;
 
