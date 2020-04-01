@@ -56,11 +56,11 @@ public:
 
     T& back()
     {
-      return data_[indexiToPos(buffer_size - 1)];
+      return data_[RingBuffer<buffer_size, T>::indexToPos(buffer_size - 1)];
     }
     const T& back() const
     {
-      return data_[indexiToPos(buffer_size - 1)];
+      return data_[RingBuffer<buffer_size, T>::indexToPos(buffer_size - 1)];
     }
 
 private:
