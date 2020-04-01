@@ -29,7 +29,7 @@ Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
 SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
-SavitzkyGolayFilter<double, 2, 3, 0> wheel_vel_filter(1);
+SavitzkyGolayFilter<double, 10, 3, 0> wheel_vel_filter(1);
 
 /////////////////////////////////////////////////////
 
@@ -202,9 +202,9 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
     state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
   }
 
-  state.cmd = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
+  float vel = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
 
-  float vel = constrain(state.cmd, -255.0, 255.0);
+  state.cmd = constrain(vel, -255.0, 255.0);
 
   // Filter the command vel so that the required tilt angle can be set.
   wheel_vel_filter.push(state.cmd/255);
