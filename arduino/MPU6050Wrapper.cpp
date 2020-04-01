@@ -6,13 +6,11 @@
 
 #include "include/Calibration.h"
 
-volatile bool mpuInterrupt = false;
 
 // AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
 // AD0 high = 0x69
-MPU6050Wrapper::MPU6050Wrapper(int interrupt_pin, int mpu_id)
+MPU6050Wrapper::MPU6050Wrapper(int mpu_id)
 : mpu(new MPU6050(mpu_id))
-, interrupt_pin(interrupt_pin)
 , dmp_ready(false)
 {
     // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -23,14 +21,10 @@ MPU6050Wrapper::MPU6050Wrapper(int interrupt_pin, int mpu_id)
         Fastwire::setup(400, true);
     #endif
 }
-MPU6050Wrapper::~MPU6050Wrapper()
-{
-    // delete mpu; // <= Not supported by AVR?
-}
+
 int MPU6050Wrapper::initialize(const GyroCalib& calib_data)
 {
     mpu->initialize();
-    pinMode(interrupt_pin, INPUT);
 
     // verify connection
     if (!mpu->testConnection())
@@ -53,8 +47,6 @@ int MPU6050Wrapper::initialize(const GyroCalib& calib_data)
     if (dev_status == 0)
     {
         mpu->setDMPEnabled(true);
-        attachInterrupt(interrupt_pin, [](){ mpuInterrupt = true; }, RISING);
-
         dmp_ready = true;
     }
     // 0 = success

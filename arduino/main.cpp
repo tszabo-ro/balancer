@@ -24,7 +24,7 @@ constexpr unsigned int heartbeat_loop_rate_ms = 500;
 
 /////////////////////////////////////////////////////
 
-MPU6050Wrapper mpu(2);
+MPU6050Wrapper mpu(0x68);
 Motor left_motor(6, 9);
 Motor right_motor(10, 11);
 
