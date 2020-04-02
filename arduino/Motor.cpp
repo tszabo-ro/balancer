@@ -3,11 +3,14 @@
 
 #include "include/Calibration.h"
 
-Motor::Motor(int fwd_pin, int bck_pin)
+#include "include/PWMDriver.h"
+
+Motor::Motor(PWMDriver& pwm, int fwd_pin, int bck_pin)
 : fwd_pin_(fwd_pin)
 , bck_pin_(bck_pin)
 , min_out_(0)
 , max_out_(255)
+, pwm_(pwm)
 {
 }
 
@@ -30,23 +33,10 @@ int16_t Motor::setSpeed(int16_t vel)
   }
 
   vel = constrain(abs(vel), 0, max_out_);
+  uint16_t send_vel = static_cast<uint16_t>(vel);
 
-//  if (vel < min_out_)
-//  {
-//    if (vel < min_out_ / 2)
-//    {
-//      vel = 0;
-//    }
-//    else
-//    {
-//      vel = min_out_;
-//    }
-//  }
-
-  uint8_t send_vel = static_cast<uint8_t>(vel);
-
-  analogWrite(drive_pin, send_vel);
-  analogWrite(off_pin, 0);
+  pwm_.setPin(drive_pin, vel);
+  pwm_.setPin(off_pin, 0);
 
   return send_vel * ((drive_pin == fwd_pin_) ? 1 : -1);
 }

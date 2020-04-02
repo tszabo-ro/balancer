@@ -4,11 +4,15 @@
 #include <inttypes.h>
 
 struct MotorCalib;
+struct Adafruit_PWMServoDriver;
+
+using PWMDriver = Adafruit_PWMServoDriver;
+
 
 class Motor
 {
 public:
-    Motor(int fwd_pin, int bck_pin);
+    Motor(PWMDriver& pwm, int fwd_pin, int bck_pin);
     int initialize(const MotorCalib& calib_data);
 
     int16_t setSpeed(int16_t vel);
@@ -19,6 +23,8 @@ private:
 
     int min_out_;
     int max_out_;
+
+    PWMDriver& pwm_;
 };
 
 #endif
