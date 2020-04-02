@@ -3,7 +3,9 @@
 #include <EEPROM.h>
 
 #include "include/MPU6050Wrapper.h"
+#include "include/PWMDriver.h"
 #include "include/Motor.h"
+
 #include "include/primitives/ring_buffer.h"
 #include "include/primitives/array.h"
 
@@ -13,6 +15,19 @@
 #include "include/Calibration.h"
 
 #define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
+
+#define LED_GREEN       5
+#define LED_BLUE        6
+#define LED_RED         7
+
+#define BUTTON_INPUT_1  8
+#define BUTTON_INPUT_2  9
+
+#define ENCODER_L_A     10
+#define ENCODER_L_B     11
+
+#define ENCODER_R_A     12
+#define ENCODER_R_B     13
 
 constexpr unsigned int imu_read_rate_ms = 5;
 
@@ -25,8 +40,11 @@ constexpr unsigned int heartbeat_loop_rate_ms = 500;
 /////////////////////////////////////////////////////
 
 MPU6050Wrapper mpu(0x68);
-Motor left_motor(6, 9);
-Motor right_motor(10, 11);
+
+PWMDriver pwm_board;
+
+Motor left_motor(pwm_board, 1, 0);
+Motor right_motor(pwm_board, 3, 2);
 
 SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
 SavitzkyGolayFilter<double, 10, 3, 0> wheel_vel_filter(1);
@@ -51,7 +69,7 @@ struct CurrentState
   CurrentState()
   : ref_angle(-0.020)
   , cmd(0)
-  , allowed_to_move(true)
+  , allowed_to_move(false)
   , left_motor_speed(0)
   , right_motor_speed(0)
   , heartbeat_state(false)
@@ -188,6 +206,7 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   if (!state.allowed_to_move)
   {
     state.angle.i_error = 0;
+    state.wheel_vel.i_error = 0;
 
     state.left_motor_speed = left_motor.setSpeed(0);
     state.right_motor_speed = right_motor.setSpeed(0);
@@ -202,12 +221,12 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
     state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
   }
 
-  float vel = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
+  float vel = (-4095.0/255.0) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
 
-  state.cmd = constrain(vel, -255.0, 255.0);
+  state.cmd = constrain(vel, -4095.0, 4095.0);
 
   // Filter the command vel so that the required tilt angle can be set.
-  wheel_vel_filter.push(state.cmd/255);
+  wheel_vel_filter.push(state.cmd/4095);
 
   state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
   state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
@@ -301,6 +320,21 @@ void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
 }
 
 /////////////////////////////////////////////////////
+//
+
+/*
+ISR (INT0_vect)
+{
+ if (PIND & bit (2))  // if it was high
+   PORTD |= bit (5);  // turn on D5
+ else
+   PORTD &= ~bit (5); // turn off D5
+
+   PORTD2
+}
+*/
+
+/////////////////////////////////////////////////////
 
 CurrentState stateStore;
 StoredData eeprom_data;
@@ -314,6 +348,14 @@ void setup()
 
   DeviceCalibration& calibration = eeprom_data.calib;
 
+  pwm_board.begin();
+  pwm_board.setPWMFreq(1000);
+
+  for (uint8_t pin = 0; pin < 16; ++pin)
+  {
+    pwm_board.setPin(pin, 0);
+  }
+
   mpu.initialize(calibration.gyro);
 
   left_motor.initialize(calibration.l_motor);
@@ -321,7 +363,26 @@ void setup()
 
   pinMode(A0, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-}
+
+  pinMode(BUTTON_INPUT_1, INPUT_PULLUP);  // Button 1
+  pinMode(BUTTON_INPUT_2, INPUT_PULLUP);  // Button 2
+
+  pinMode(LED_GREEN, OUTPUT);       // LED: Green
+  pinMode(LED_BLUE, OUTPUT);       // LED: Blue
+  pinMode(LED_RED, OUTPUT);       // LED: Red
+
+  if (!digitalRead(BUTTON_INPUT_1))
+  {
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_BLUE, HIGH);
+    calibration.read();
+  }
+
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, LOW);
+ }
 
 void loop()
 {
