@@ -71,6 +71,111 @@ void DeviceCalibration::print() const
   Serial.println(r_motor.max_output);
 }
 
+
+static int16_t readValue(const char* param_name, int16_t current_val)
+{
+  Serial.print(param_name);
+  Serial.print(" [");
+  Serial.print(current_val);
+  Serial.print("] : ");
+
+  int16_t new_val = current_val;
+
+  String new_val_str = Serial.readStringUntil('\n');
+  if (new_val_str.length() > 1)
+  {
+    new_val = new_val_str.toInt();
+  }
+  Serial.println(new_val);
+
+  return new_val;
+}
+
+static void printVal(const char* str, int16_t val)
+{
+  Serial.print(str);
+  Serial.print(": ");
+  Serial.println(val);
+}
+void DeviceCalibration::read()
+{
+  Serial.setTimeout(9999000);
+  Serial.println("Calibration update started.");
+
+  bool update_read = false;
+  while (!update_read)
+  {
+    int16_t gyro_gyro_x_offset = readValue("gyro_x_offset", gyro.gyro_x_offset);
+    int16_t gyro_gyro_y_offset = readValue("gyro_y_offset", gyro.gyro_y_offset);
+    int16_t gyro_gyro_z_offset = readValue("gyro_z_offset", gyro.gyro_z_offset);
+
+    int16_t gyro_acc_x_offset = readValue("acc_x_offset", gyro.acc_x_offset);
+    int16_t gyro_acc_y_offset = readValue("acc_y_offset", gyro.acc_y_offset);
+    int16_t gyro_acc_z_offset = readValue("acc_z_offset", gyro.acc_z_offset);
+
+    int16_t l_motor_min_output = readValue("l_motor.min_output", l_motor.min_output);
+    int16_t l_motor_max_output = readValue("l_motor.max_output", l_motor.max_output);
+
+    int16_t r_motor_min_output = readValue("r_motor.min_output", r_motor.min_output);
+    int16_t r_motor_max_output = readValue("r_motor.max_output", r_motor.max_output);
+
+    Serial.println("Calibration update finished. Current calibration set:");
+
+    printVal("gyro_x_offset", gyro_gyro_x_offset);
+    printVal("gyro_y_offset", gyro_gyro_y_offset);
+    printVal("gyro_z_offset", gyro_gyro_z_offset);
+
+    printVal("acc_x_offset", gyro_acc_x_offset);
+    printVal("acc_y_offset", gyro_acc_y_offset);
+    printVal("acc_z_offset", gyro_acc_z_offset);
+
+    printVal("Left motor min", l_motor_min_output);
+    printVal("Left motor max", l_motor_max_output);
+
+    printVal("Right motor min", r_motor_min_output);
+    printVal("Right motor max", r_motor_max_output);
+
+    bool valid_response = false;
+    while (!valid_response)
+    {
+      Serial.println("Do you want to store these? [Y/N]");
+
+      String new_val_str = Serial.readStringUntil('\n');
+      new_val_str.toUpperCase();
+      if (new_val_str.startsWith("Y"))
+      {
+        gyro.acc_x_offset = gyro_gyro_x_offset;
+        gyro.acc_y_offset = gyro_gyro_y_offset;
+        gyro.acc_z_offset = gyro_gyro_z_offset;
+
+        gyro.acc_x_offset = gyro_acc_x_offset;
+        gyro.acc_y_offset = gyro_acc_y_offset;
+        gyro.acc_z_offset = gyro_acc_z_offset;
+
+        l_motor.min_output = l_motor_min_output;
+        l_motor.max_output = l_motor_max_output;
+
+        r_motor.min_output = r_motor_min_output;
+        r_motor.max_output = r_motor_max_output;
+
+        store();
+
+        Serial.println("Calibration updated. Please reconnect the serial line and restart the controller.");
+        while (true)
+        {
+        }
+      }
+      else if (new_val_str.startsWith("N"))
+      {
+        Serial.println("Readings discarded. Restarting the calibration readings. You may cancel this by restarting the device!");
+        Serial.println("");
+        valid_response = true;
+      }
+
+    }
+  }
+}
+
 /////////////////////////
 
 PIDParams::PIDParams(unsigned int start_address)

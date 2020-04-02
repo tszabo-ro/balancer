@@ -33,6 +33,8 @@ struct DeviceCalibration
   void load();
   void store();
   void print() const;
+
+  void read();
 };
 
 struct PIDParams
