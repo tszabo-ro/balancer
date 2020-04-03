@@ -331,19 +331,25 @@ void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
 }
 
 /////////////////////////////////////////////////////
-//
+// Interrupt handling
 
-/*
-ISR (INT0_vect)
+void (*interrupt_fcns[8])() = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+uint8_t last_PINB;
+ISR (PCINT0_vect)
 {
- if (PIND & bit (2))  // if it was high
-   PORTD |= bit (5);  // turn on D5
- else
-   PORTD &= ~bit (5); // turn off D5
+  uint8_t change_B = last_PINB ^ PINB;
 
-   PORTD2
+  for (uint8_t b = 0; b < 6; ++b)
+  {
+    if ( (interrupt_fcns[b] != nullptr) && (change_B & bit(b)) && (PINB & bit(b)) )
+    {
+      interrupt_fcns[b]();
+    }
+  }
+  last_PINB = PINB;
 }
-*/
+
 
 /////////////////////////////////////////////////////
 
@@ -393,6 +399,10 @@ void setup()
   digitalWrite(LED_GREEN, HIGH);
   digitalWrite(LED_RED, LOW);
   digitalWrite(LED_BLUE, LOW);
+
+  PCICR  |= bit(PCIE0);    // enable pin change interrupts for D8 to D13
+  PCIFR  &= ~bit(PCIF0);    // clear any outstanding interrupts
+  PCMSK0 = 0xFF;
  }
 
 void loop()
