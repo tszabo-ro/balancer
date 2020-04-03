@@ -43,8 +43,8 @@ MPU6050Wrapper mpu(0x68);
 
 PWMDriver pwm_board;
 
-Motor left_motor(pwm_board, 1, 0);
-Motor right_motor(pwm_board, 3, 2);
+Motor right_motor(pwm_board, 1, 0);
+Motor left_motor(pwm_board, 3, 2);
 
 SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
 SavitzkyGolayFilter<double, 10, 3, 0> wheel_vel_filter(1);
@@ -70,8 +70,6 @@ struct CurrentState
   : ref_angle(-0.020)
   , cmd(0)
   , allowed_to_move(false)
-  , left_motor_speed(0)
-  , right_motor_speed(0)
   , heartbeat_state(false)
   {
   }
@@ -83,8 +81,6 @@ struct CurrentState
   float cmd;
 
   bool allowed_to_move;
-  int16_t left_motor_speed;
-  int16_t right_motor_speed;
 
   bool heartbeat_state;
 };
@@ -105,6 +101,8 @@ void sendFeedback(CurrentState& state, const Params& params)
   float voltage=getSupplyVoltage();
 
   state.allowed_to_move = state.allowed_to_move && (voltage > MIN_ALLOWED_VOLTAGE_TO_DRIVE);
+  right_motor.disable(!state.allowed_to_move);
+  left_motor.disable(!state.allowed_to_move);
 
   if (state.allowed_to_move)
   {
@@ -135,9 +133,9 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.print(" ");
   Serial.print(state.cmd * 10);
   Serial.print(" ");
-  Serial.print(state.left_motor_speed);
+  Serial.print(left_motor.getSpeed());
   Serial.print(" ");
-  Serial.print(state.right_motor_speed);
+  Serial.print(right_motor.getSpeed());
   Serial.print(" ");
   Serial.print(params.outer.kP);
   Serial.print(" ");
@@ -224,23 +222,15 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
     state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
   }
 
-  float vel = (-4095.0/255.0) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
+  float vel = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
 
-  state.cmd = constrain(vel, -4095.0, 4095.0);
+  state.cmd = constrain(vel, -220, 220);
 
   // Filter the command vel so that the required tilt angle can be set.
-  wheel_vel_filter.push(state.cmd/4095);
+  wheel_vel_filter.push(state.cmd);
 
-  if (!state.allowed_to_move)
-  {
-    state.left_motor_speed = left_motor.setSpeed(0);
-    state.right_motor_speed = right_motor.setSpeed(0);
-  }
-  else
-  {
-    state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
-    state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
-  }
+  left_motor.setSpeed(round(state.cmd));
+  right_motor.setSpeed(round(state.cmd));
 }
 
 
@@ -327,7 +317,6 @@ void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
   (void)params; // Not used here
 
   state.heartbeat_state = !state.heartbeat_state;
-  digitalWrite(LED_BUILTIN, state.heartbeat_state);
 }
 
 /////////////////////////////////////////////////////
@@ -381,7 +370,13 @@ void setup()
   right_motor.initialize(calibration.r_motor);
 
   pinMode(A0, INPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
+
+  pinMode(8, INPUT);
+  pinMode(9, INPUT);
+  pinMode(10, INPUT);
+  pinMode(11, INPUT);
+  pinMode(12, INPUT);
+  pinMode(13, INPUT);
 
   pinMode(LED_GREEN, OUTPUT);       // LED: Green
   pinMode(LED_BLUE, OUTPUT);       // LED: Blue
@@ -414,6 +409,12 @@ void setup()
       }
     };
 
+  interrupt_fcns[2] = []() { right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
+  interrupt_fcns[3] = []() { right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
+
+  interrupt_fcns[4] = []() { left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
+  interrupt_fcns[5] = []() { left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
+
   unsigned long T = millis();
   uint16_t period = 300;
   pwm_board.setPin(4, 2095);
@@ -441,7 +442,6 @@ void setup()
   }
   pwm_board.setPin(4, 0);
 
-
   PCICR  |= bit(PCIE0);    // enable pin change interrupts for D8 to D13
   PCIFR  &= ~bit(PCIF0);    // clear any outstanding interrupts
   PCMSK0 = 0xFF;
@@ -451,6 +451,9 @@ void setup()
 
 void loop()
 {
+  right_motor.controlCycle();
+  left_motor.controlCycle();
+
   unsigned long now = millis();
   imuReadLoop(now, stateStore, paramStore);
 
@@ -458,5 +461,6 @@ void loop()
   velocityLoop(now, stateStore, paramStore);
 
   commLoop(now, stateStore, paramStore);
+
   heartbeatLoop(now, stateStore, paramStore);
 }
