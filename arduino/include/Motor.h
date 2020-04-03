@@ -15,16 +15,34 @@ public:
     Motor(PWMDriver& pwm, int fwd_pin, int bck_pin);
     int initialize(const MotorCalib& calib_data);
 
-    int16_t setSpeed(int16_t vel);
+    void setSpeed(float vel_rpm);
+    float getSpeed() const { return current_speed_; }
+
+    void controlCycle();
+
+    void disable(bool disable) { disabled_ = disable; }
+
+    void encoderTick(bool A, bool B);
+
 
 private:
     const int fwd_pin_;
     const int bck_pin_;
 
+    bool disabled_;
+
     int min_out_;
     int max_out_;
 
     PWMDriver& pwm_;
+
+    unsigned long last_cycle_time_;
+    int16_t tick_count_;
+
+    float speed_target_;
+    float current_speed_;
+
+    double speed_error_integral_;
 };
 
 #endif
