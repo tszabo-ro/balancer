@@ -29,7 +29,7 @@ BOARD_SUB         = atmega328
 
 ### MONITOR_PORT
 ### The port your board is connected to. Using an '*' tries all the ports and finds the right one.
-MONITOR_PORT      = /dev/tty.usbserial-*
+MONITOR_PORT      = /dev/tty.usbserial-A50285BI 
 
 ### MONITOR_BAUDRATE
 ### It must be set to Serial baudrate value you are using.
