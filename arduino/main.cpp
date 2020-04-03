@@ -106,6 +106,19 @@ void sendFeedback(CurrentState& state, const Params& params)
 
   state.allowed_to_move = state.allowed_to_move && (voltage > MIN_ALLOWED_VOLTAGE_TO_DRIVE);
 
+  if (state.allowed_to_move)
+  {
+    digitalWrite(LED_BLUE, LOW);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, HIGH);
+  }
+  else
+  {
+    digitalWrite(LED_BLUE, LOW);
+    digitalWrite(LED_RED, HIGH);
+    digitalWrite(LED_GREEN, LOW);
+  }
+
   Serial.print(voltage);
   Serial.print(" ");
   Serial.print(params.inner.kP);
@@ -203,16 +216,6 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   }
   last_stabilizer_exec  = T;
 
-  if (!state.allowed_to_move)
-  {
-    state.angle.i_error = 0;
-    state.wheel_vel.i_error = 0;
-
-    state.left_motor_speed = left_motor.setSpeed(0);
-    state.right_motor_speed = right_motor.setSpeed(0);
-    return;
-  }
-
   state.angle.error = imu_filter.filter(0);
   state.angle.d_error = imu_filter.filter(1);
 
@@ -228,8 +231,16 @@ void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
   // Filter the command vel so that the required tilt angle can be set.
   wheel_vel_filter.push(state.cmd/4095);
 
-  state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
-  state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
+  if (!state.allowed_to_move)
+  {
+    state.left_motor_speed = left_motor.setSpeed(0);
+    state.right_motor_speed = right_motor.setSpeed(0);
+  }
+  else
+  {
+    state.left_motor_speed = left_motor.setSpeed(round(state.cmd));
+    state.right_motor_speed = right_motor.setSpeed(round(state.cmd));
+  }
 }
 
 
