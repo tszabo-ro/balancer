@@ -358,6 +358,8 @@ StoredData eeprom_data;
 
 Params& paramStore = eeprom_data.params;
 
+unsigned long button_1_time = 0;
+
 void setup()
 {
   Serial.begin(115200);
@@ -381,12 +383,12 @@ void setup()
   pinMode(A0, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  pinMode(BUTTON_INPUT_1, INPUT_PULLUP);  // Button 1
-  pinMode(BUTTON_INPUT_2, INPUT_PULLUP);  // Button 2
-
   pinMode(LED_GREEN, OUTPUT);       // LED: Green
   pinMode(LED_BLUE, OUTPUT);       // LED: Blue
   pinMode(LED_RED, OUTPUT);       // LED: Red
+
+  pinMode(BUTTON_INPUT_1, INPUT_PULLUP);  // Button 1
+  pinMode(BUTTON_INPUT_2, INPUT_PULLUP);  // Button 2
 
   if (!digitalRead(BUTTON_INPUT_1))
   {
@@ -396,13 +398,28 @@ void setup()
     calibration.read();
   }
 
-  digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_BLUE, LOW);
+  interrupt_fcns[0] = []() {
+      unsigned long now = micros();
+      if (now < (button_1_time + 500000))
+      {
+        return;
+      }
+      button_1_time = now;
+
+      stateStore.allowed_to_move = !stateStore.allowed_to_move;
+      if (stateStore.allowed_to_move)
+      {
+        stateStore.angle.i_error = 0;
+        stateStore.wheel_vel.i_error = 0;
+      }
+    };
+
 
   PCICR  |= bit(PCIE0);    // enable pin change interrupts for D8 to D13
   PCIFR  &= ~bit(PCIF0);    // clear any outstanding interrupts
   PCMSK0 = 0xFF;
+
+  stateStore.allowed_to_move = false;
  }
 
 void loop()
