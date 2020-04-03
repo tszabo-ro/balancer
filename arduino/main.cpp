@@ -414,6 +414,33 @@ void setup()
       }
     };
 
+  unsigned long T = millis();
+  uint16_t period = 300;
+  pwm_board.setPin(4, 2095);
+  while (millis() < (T + 2000))
+  {
+    auto ref = (millis() - T) % period;
+    if (ref < period/3)
+    {
+      digitalWrite(LED_RED, LOW);
+      digitalWrite(LED_BLUE, LOW);
+      digitalWrite(LED_GREEN, HIGH);
+    }
+    else if (ref < 2*period/3)
+    {
+      digitalWrite(LED_RED, LOW);
+      digitalWrite(LED_BLUE, HIGH);
+      digitalWrite(LED_GREEN, LOW);
+    }
+    else
+    {
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_BLUE, LOW);
+      digitalWrite(LED_GREEN, LOW);
+    }
+  }
+  pwm_board.setPin(4, 0);
+
 
   PCICR  |= bit(PCIE0);    // enable pin change interrupts for D8 to D13
   PCIFR  &= ~bit(PCIF0);    // clear any outstanding interrupts
