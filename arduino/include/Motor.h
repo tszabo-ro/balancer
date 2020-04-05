@@ -16,6 +16,7 @@ public:
     int initialize(const MotorCalib& calib_data);
 
     void setSpeed(float vel_rpm);
+    float setSpeed() const { return speed_target_; }
     float getSpeed() const { return current_speed_; }
 
     void controlCycle();

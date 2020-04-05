@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
+StoredData EEPROM_DATA;
+
 DeviceCalibration::DeviceCalibration(unsigned int start_address)
 : eeprom_address(start_address)
 {

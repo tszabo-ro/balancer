@@ -1,323 +1,15 @@
 
 #include <Arduino.h>
-#include <EEPROM.h>
 
-#include "include/MPU6050Wrapper.h"
-#include "include/PWMDriver.h"
-#include "include/Motor.h"
-
-#include "include/primitives/ring_buffer.h"
-#include "include/primitives/array.h"
-
-#include "include/filters/savitzky_golay.h"
-#include "include/filters/moving_average.h"
+#include "include/robot.h"
+#include "include/control_loops.h"
 
 #include "include/Calibration.h"
 
-#define MIN_ALLOWED_VOLTAGE_TO_DRIVE 11.3
-
-#define LED_GREEN       5
-#define LED_BLUE        6
-#define LED_RED         7
-
-#define BUTTON_INPUT_1  8
-#define BUTTON_INPUT_2  9
-
-#define ENCODER_L_A     10
-#define ENCODER_L_B     11
-
-#define ENCODER_R_A     12
-#define ENCODER_R_B     13
-
-constexpr unsigned int imu_read_rate_ms = 5;
-
-constexpr unsigned int stabilizer_rate_ms = 25;
-constexpr unsigned int velocity_rate_ms = 200;
-
-constexpr unsigned int comm_loop_rate_ms = 100;
-constexpr unsigned int heartbeat_loop_rate_ms = 500;
-
 /////////////////////////////////////////////////////
+// ROBOT is the sole state carrier, within this application
 
-MPU6050Wrapper mpu(0x68);
-
-PWMDriver pwm_board;
-
-Motor right_motor(pwm_board, 1, 0);
-Motor left_motor(pwm_board, 3, 2);
-
-SavitzkyGolayFilter<double, 2, 3, 0> imu_filter(1);
-SavitzkyGolayFilter<double, 10, 3, 0> wheel_vel_filter(1);
-
-/////////////////////////////////////////////////////
-
-struct PIDState
-{
-  PIDState()
-  : error(0)
-  , d_error(0)
-  , i_error(0)
-  {}
-
-  float error;
-  float d_error;
-  float i_error;
-};
-
-struct CurrentState
-{
-  CurrentState()
-  : ref_angle(-0.020)
-  , cmd(0)
-  , allowed_to_move(false)
-  , heartbeat_state(false)
-  {
-  }
-
-  PIDState angle;
-  PIDState wheel_vel;
-
-  float ref_angle = 0; // At some point this is going to be the control variable for the speed!
-  float cmd;
-
-  bool allowed_to_move;
-
-  bool heartbeat_state;
-};
-
-
-/////////////////////////////////////////////////////
-
-float getSupplyVoltage()
-{
-  int ref = analogRead(A0);
-  constexpr float shunt_multiplier = 3.0;
-  constexpr float ref_voltage = 5.0;
-  return (static_cast<float>(ref)/1023.0) * shunt_multiplier * ref_voltage;
-}
-
-void sendFeedback(CurrentState& state, const Params& params)
-{
-  float voltage=getSupplyVoltage();
-
-  state.allowed_to_move = state.allowed_to_move && (voltage > MIN_ALLOWED_VOLTAGE_TO_DRIVE);
-  right_motor.disable(!state.allowed_to_move);
-  left_motor.disable(!state.allowed_to_move);
-
-  if (state.allowed_to_move)
-  {
-    digitalWrite(LED_BLUE, LOW);
-    digitalWrite(LED_RED, LOW);
-    digitalWrite(LED_GREEN, HIGH);
-  }
-  else
-  {
-    digitalWrite(LED_BLUE, LOW);
-    digitalWrite(LED_RED, HIGH);
-    digitalWrite(LED_GREEN, LOW);
-  }
-
-  Serial.print(voltage);
-  Serial.print(" ");
-  Serial.print(params.inner.kP);
-  Serial.print(" ");
-  Serial.print(params.inner.kD);
-  Serial.print(" ");
-  Serial.print(params.inner.kI);
-  Serial.print(" ");
-  Serial.print(state.angle.error * 10);
-  Serial.print(" ");
-  Serial.print(state.angle.d_error * 10);
-  Serial.print(" ");
-  Serial.print(state.angle.i_error * 10);
-  Serial.print(" ");
-  Serial.print(state.cmd * 10);
-  Serial.print(" ");
-  Serial.print(left_motor.getSpeed());
-  Serial.print(" ");
-  Serial.print(right_motor.getSpeed());
-  Serial.print(" ");
-  Serial.print(params.outer.kP);
-  Serial.print(" ");
-  Serial.print(params.outer.kD);
-  Serial.print(" ");
-  Serial.print(params.outer.kI);
-  Serial.print(" ");
-  Serial.print(state.wheel_vel.error * 10);
-  Serial.print(" ");
-  Serial.print(state.wheel_vel.d_error * 10);
-  Serial.print(" ");
-  Serial.print(state.wheel_vel.i_error * 10);
-  Serial.print(" ");
-  Serial.print(state.ref_angle * 1000);
-  Serial.println("");
-}
-
-unsigned long last_imu_read = 0;
-
-void imuReadLoop(unsigned long T, const CurrentState& state, const Params& params)
-{
-  (void)params; // Not used here
-
-  if (T < last_imu_read + imu_read_rate_ms)
-  {
-    return;
-  }
-  last_imu_read  = T;
-
-  if (mpu.read())
-  {
-    imu_filter.push(state.ref_angle -mpu.getRoll());
-  }
-}
-
-unsigned long last_velocity_exec = 0;
-
-void  velocityLoop(unsigned long T, CurrentState &state, const Params& params)
-{
-  if (T < last_velocity_exec + velocity_rate_ms)
-  {
-    return;
-  }
-  last_velocity_exec = T;
-
-  state.wheel_vel.error = wheel_vel_filter.filter(0);
-  state.wheel_vel.d_error = wheel_vel_filter.filter(1);
-
-  constexpr float max_tilt_angle = 4 * M_PI/180;
-
-  if (((state.wheel_vel.i_error > 0) && (state.wheel_vel.error < 0)) || ((state.wheel_vel.i_error < 0) && (state.wheel_vel.error > 0)) || (fabs(state.wheel_vel.i_error * params.outer.kI) < max_tilt_angle))
-  {
-    state.wheel_vel.i_error += state.wheel_vel.error * velocity_rate_ms / 1000.0;
-  }
-
-  /*float ref_angle = (-1) * (params.outer.kP * state.wheel_vel.error + params.outer.kD * state.wheel_vel.d_error + params.outer.kI * state.wheel_vel.i_error);
-
-  if (fabs(ref_angle) < max_tilt_angle)
-  {
-    state.ref_angle = ref_angle;
-  }
-  else
-  {
-    state.ref_angle = (ref_angle > 0) ? max_tilt_angle : -max_tilt_angle;
-  }
-*/
-}
-
-unsigned long last_stabilizer_exec = 0;
-
-void stabilizerLoop(unsigned long T, CurrentState& state, const Params& params)
-{
-  if (T < last_stabilizer_exec + stabilizer_rate_ms)
-  {
-    return;
-  }
-  last_stabilizer_exec  = T;
-
-  state.angle.error = imu_filter.filter(0);
-  state.angle.d_error = imu_filter.filter(1);
-
-  if (((state.angle.i_error > 0) && (state.angle.error < 0)) || ((state.angle.i_error < 0) && (state.angle.error > 0)) || (fabs(state.angle.i_error * params.inner.kI) < 255.0))
-  {
-    state.angle.i_error += state.angle.error*stabilizer_rate_ms / 1000.0;
-  }
-
-  float vel = (-1) * (params.inner.kP * state.angle.error + params.inner.kD * state.angle.d_error + params.inner.kI * state.angle.i_error);
-
-  state.cmd = constrain(vel, -220, 220);
-
-  // Filter the command vel so that the required tilt angle can be set.
-  wheel_vel_filter.push(state.cmd);
-
-  left_motor.setSpeed(round(state.cmd));
-  right_motor.setSpeed(round(state.cmd));
-}
-
-
-void readParams(CurrentState& state, Params& params)
-{
-    String indicator_str = Serial.readStringUntil('/');
-
-    if (indicator_str.length() != 1)
-    {
-      return;
-    }
-
-    PIDParams *controller_params = &params.inner;
-    PIDState *controller_state = &state.angle;
-
-    if (indicator_str == "o")
-    {
-      controller_params = &params.outer;
-      controller_state = &state.wheel_vel;
-    }
-    else if (indicator_str != "i")
-    {
-      return;
-    }
-
-    String kp_str = Serial.readStringUntil('/');
-    String kd_str = Serial.readStringUntil('/');
-    String ki_str = Serial.readStringUntil('/');
-
-    if ( (kp_str.length() == 0) || (kd_str.length() == 0) || (ki_str.length() == 0) )
-    {
-      return;
-    }
-
-    float kp = kp_str.toFloat();
-    float kd = kd_str.toFloat();
-    float ki = ki_str.toFloat();
-
-    if ((kp >= 0) && (kd >= 0) && (ki >= 0))
-    {
-      controller_params->kP = kp;
-      controller_params->kD = kd;
-      controller_params->kI = ki;
-
-      controller_params->store();
-      controller_state->i_error = 0;
-    }
-}
-
-unsigned long last_comm_exec = 0;
-
-void commLoop(unsigned long T, CurrentState& state, Params& params)
-{
-  if (T < last_comm_exec + comm_loop_rate_ms)
-  {
-    return;
-  }
-  last_comm_exec  = T;
-
-  sendFeedback(state, params);
-
-  if (Serial.available() > 6)
-  {
-    readParams(state, params);
-
-    while (Serial.available())
-    {
-      Serial.read();
-    }
-  }
-
-}
-
-unsigned long last_heartbeat_exec = 0;
-
-void heartbeatLoop(unsigned long T, CurrentState& state, Params& params)
-{
-  if (T < last_heartbeat_exec + heartbeat_loop_rate_ms)
-  {
-    return;
-  }
-  last_heartbeat_exec  = T;
-
-  (void)params; // Not used here
-
-  state.heartbeat_state = !state.heartbeat_state;
-}
+Robot ROBOT;
 
 /////////////////////////////////////////////////////
 // Interrupt handling
@@ -342,11 +34,6 @@ ISR (PCINT0_vect)
 
 /////////////////////////////////////////////////////
 
-CurrentState stateStore;
-StoredData eeprom_data;
-
-Params& paramStore = eeprom_data.params;
-
 unsigned long button_1_time = 0;
 
 void setup()
@@ -354,20 +41,20 @@ void setup()
   Serial.begin(115200);
   Serial.setTimeout(2);
 
-  DeviceCalibration& calibration = eeprom_data.calib;
+  DeviceCalibration& calibration = EEPROM_DATA.calib;
 
-  pwm_board.begin();
-  pwm_board.setPWMFreq(1000);
+  ROBOT.pwm_board.begin();
+  ROBOT.pwm_board.setPWMFreq(1000);
 
   for (uint8_t pin = 0; pin < 16; ++pin)
   {
-    pwm_board.setPin(pin, 0);
+    ROBOT.pwm_board.setPin(pin, 0);
   }
 
-  mpu.initialize(calibration.gyro);
+  ROBOT.mpu.initialize(calibration.gyro);
 
-  left_motor.initialize(calibration.l_motor);
-  right_motor.initialize(calibration.r_motor);
+  ROBOT.left_motor.initialize(calibration.l_motor);
+  ROBOT.right_motor.initialize(calibration.r_motor);
 
   pinMode(A0, INPUT);
 
@@ -401,23 +88,23 @@ void setup()
       }
       button_1_time = now;
 
-      stateStore.allowed_to_move = !stateStore.allowed_to_move;
-      if (stateStore.allowed_to_move)
+      ROBOT.allowed_to_move = !ROBOT.allowed_to_move;
+      if (ROBOT.allowed_to_move)
       {
-        stateStore.angle.i_error = 0;
-        stateStore.wheel_vel.i_error = 0;
+        stabilizer.reset();
+        vel_loop.reset();
       }
     };
 
-  interrupt_fcns[2] = []() { right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
-  interrupt_fcns[3] = []() { right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
+  interrupt_fcns[2] = []() { ROBOT.right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
+  interrupt_fcns[3] = []() { ROBOT.right_motor.encoderTick(PINB & bit(3), PINB & bit(2)); };
 
-  interrupt_fcns[4] = []() { left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
-  interrupt_fcns[5] = []() { left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
+  interrupt_fcns[4] = []() { ROBOT.left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
+  interrupt_fcns[5] = []() { ROBOT.left_motor.encoderTick(PINB & bit(4), PINB & bit(5)); };
 
   unsigned long T = millis();
   uint16_t period = 300;
-  pwm_board.setPin(4, 2095);
+  ROBOT.pwm_board.setPin(4, 2095);
   while (millis() < (T + 2000))
   {
     auto ref = (millis() - T) % period;
@@ -440,27 +127,34 @@ void setup()
       digitalWrite(LED_GREEN, LOW);
     }
   }
-  pwm_board.setPin(4, 0);
+  ROBOT.pwm_board.setPin(4, 0);
 
   PCICR  |= bit(PCIE0);    // enable pin change interrupts for D8 to D13
   PCIFR  &= ~bit(PCIF0);    // clear any outstanding interrupts
   PCMSK0 = 0xFF;
 
-  stateStore.allowed_to_move = false;
+  ROBOT.allowed_to_move = false;
  }
+
+Task read_imu(200, []() {
+  if (ROBOT.mpu.read())
+  {
+    ROBOT.imu_filter.push(ROBOT.state.angle_reference - ROBOT.mpu.getRoll());
+  }
+});
+
+Task heartbeat(2, [](){ ROBOT.state.heartbeat = !ROBOT.state.heartbeat; });
 
 void loop()
 {
-  right_motor.controlCycle();
-  left_motor.controlCycle();
+  ROBOT.right_motor.controlCycle();
+  ROBOT.left_motor.controlCycle();
 
   unsigned long now = millis();
-  imuReadLoop(now, stateStore, paramStore);
+  read_imu.run(now);
 
-  stabilizerLoop(now, stateStore, paramStore);
-  velocityLoop(now, stateStore, paramStore);
-
-  commLoop(now, stateStore, paramStore);
-
-  heartbeatLoop(now, stateStore, paramStore);
+  stabilizer.run(now);
+  vel_loop.run(now);
+  communication.run(now);
+  heartbeat.run(now);
 }

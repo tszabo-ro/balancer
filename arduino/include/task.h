@@ -6,10 +6,11 @@
 class Task
 {
 public:
-  Task(float execution_rate_hz, void (*executor)())
+  Task(float execution_rate_hz, void (*executor)(), void (*reset)() = [](){})
   : time_between_calls_(static_cast<unsigned int>(1000.0/execution_rate_hz)) // [ms]
   , last_call_time_(0)
   , executor_(executor)
+  , reset_(reset)
   {
   }
 
@@ -24,11 +25,17 @@ public:
     executor_();
   }
 
+  void reset()
+  {
+    reset_();
+  }
+
 private:
   const unsigned int time_between_calls_;
   unsigned long last_call_time_;
 
   void (*executor_)();
+  void (*reset_)();
 };
 
 #endif

@@ -76,4 +76,5 @@ struct StoredData
   Params params;
 };
 
+extern StoredData EEPROM_DATA;
 #endif
