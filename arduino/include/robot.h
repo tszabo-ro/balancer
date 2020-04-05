@@ -37,7 +37,7 @@ struct State
 struct Robot
 {
   Robot()
-  : mpu(0x62)
+  : mpu(0x68)
   , pwm_board()
   , right_motor(pwm_board, 1, 0)
   , left_motor(pwm_board, 3, 2)
