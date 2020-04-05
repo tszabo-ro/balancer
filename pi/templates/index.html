@@ -3,8 +3,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js" ></script>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js"></script>
     <script>
-        const rad2deg = (val) => {
-            return Math.round(val * 180 / Math.PI);
+        const limitDecimals = (val) => {
+            return Math.round(val * 100)/100.0;
         }
         const onMessage = (event) => {
 
@@ -23,9 +23,9 @@
             document.getElementById("i_kd").innerHTML = data.i_kd;
             document.getElementById("i_ki").innerHTML = data.i_ki;
 
-            document.getElementById("i_ep").innerHTML = rad2deg(data.i_e)* 20;
-            document.getElementById("i_ed").innerHTML = rad2deg(data.i_de)* 20;
-            document.getElementById("i_ei").innerHTML = rad2deg(data.i_ie) * 20;
+            document.getElementById("i_ep").innerHTML = limitDecimals(data.i_e);
+            document.getElementById("i_ed").innerHTML = limitDecimals(data.i_de);
+            document.getElementById("i_ei").innerHTML = limitDecimals(data.i_ie);
 
             document.getElementById("vel_left").innerHTML = data.vl;
             document.getElementById("vel_right").innerHTML = data.vr;
@@ -34,21 +34,21 @@
             document.getElementById("o_kd").innerHTML = data.o_kd;
             document.getElementById("o_ki").innerHTML = data.o_ki;
 
-            document.getElementById("o_ep").innerHTML = rad2deg(data.o_e)* 20;
-            document.getElementById("o_ed").innerHTML = rad2deg(data.o_de)* 20;
-            document.getElementById("o_ei").innerHTML = rad2deg(data.o_ie) * 20;
+            document.getElementById("o_ep").innerHTML = limitDecimals(data.o_e);
+            document.getElementById("o_ed").innerHTML = limitDecimals(data.o_de);
+            document.getElementById("o_ei").innerHTML = limitDecimals(data.o_ie);
 
-            document.getElementById("a_ref").innerHTML = rad2deg(data.a_ref) / 1000;
+            document.getElementById("a_ref").innerHTML = limitDecimals(data.a_ref);
 
              const now = Date()
 
             window.ws_data.push({
               time: (now - window.lastStamp),
-              e: rad2deg(data.e),
-              de: rad2deg(data.de),
-              ie: rad2deg(data.ie),
-              vl: data.vl,
-              vr: data.vr
+              e: limitDecimals(data.i_e),
+              de: limitDecimals(data.i_ed),
+              ie: limitDecimals(data.i_ei),
+              vl: data.vl / 10.0,
+              vr: data.vr / 10.0
             });
             window.ws_data = (_).takeRight(window.ws_data, window.numPoints);
 
@@ -135,8 +135,8 @@
                     scales: {
                         yAxes: [{
                             ticks: {
-                                suggestedMin: -255,
-                                suggestedMax: 255
+                                suggestedMin: -20,
+                                suggestedMax: 20
                             }
                         }]
                     }
