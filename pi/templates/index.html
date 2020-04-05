@@ -38,7 +38,7 @@
             document.getElementById("o_ed").innerHTML = rad2deg(data.o_de)* 20;
             document.getElementById("o_ei").innerHTML = rad2deg(data.o_ie) * 20;
 
-            document.getElementById("a_ref").innerHTML = rad2deg(data.a_ref) * 100;
+            document.getElementById("a_ref").innerHTML = rad2deg(data.a_ref) / 1000;
 
              const now = Date()
 
@@ -190,12 +190,13 @@
         <h1 id="error" style="color:red; text-align:center"></h1>
         <center>
         <table>
-           <tr>
-             <td colspan="2"><b>Ref angle:</b> <p id="a_ref"></p></td>
-           </tr> 
             <tr>
             <td>
             <table border="1">
+                <tr>
+                  <td><b>Ref angle:</b></td>
+                  <td><p id="a_ref"></p></td>
+                </tr>
                 <tr>
                     <td align="center" colspan="2" ><b>Voltage:</b></td>
                     <td align="center" colspan="2" ><p id="voltage"></p></td>

@@ -149,7 +149,7 @@ void sendFeedback(CurrentState& state, const Params& params)
   Serial.print(" ");
   Serial.print(state.wheel_vel.i_error * 10);
   Serial.print(" ");
-  Serial.print(state.ref_angle * 10);
+  Serial.print(state.ref_angle * 1000);
   Serial.println("");
 }
 
