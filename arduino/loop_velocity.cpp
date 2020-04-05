@@ -21,7 +21,7 @@ Task vel_loop(VELOCITY_LOOP_RATE_HZ, []() {
 
   if (((vel_i_error > 0) && (vel_error < 0)) || ((vel_i_error < 0) && (vel_error > 0)) || (fabs(vel_i_error * params.outer.kI) < max_tilt_angle))
   {
-    vel_i_error += vel_error * (1000.0 / VELOCITY_LOOP_RATE_HZ);
+    vel_i_error += vel_error * (1.0 / VELOCITY_LOOP_RATE_HZ);
   }
 
   /*float ref_angle = (-1) * (params.outer.kP * state.wheel_vel.error + params.outer.kD * state.wheel_vel.d_error + params.outer.kI * state.wheel_vel.i_error);
