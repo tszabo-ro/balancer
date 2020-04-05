@@ -191,7 +191,7 @@ void  velocityLoop(unsigned long T, CurrentState &state, const Params& params)
     state.wheel_vel.i_error += state.wheel_vel.error * velocity_rate_ms / 1000.0;
   }
 
-  float ref_angle = (-1) * (params.outer.kP * state.wheel_vel.error + params.outer.kD * state.wheel_vel.d_error + params.outer.kI * state.wheel_vel.i_error);
+  /*float ref_angle = (-1) * (params.outer.kP * state.wheel_vel.error + params.outer.kD * state.wheel_vel.d_error + params.outer.kI * state.wheel_vel.i_error);
 
   if (fabs(ref_angle) < max_tilt_angle)
   {
@@ -201,7 +201,7 @@ void  velocityLoop(unsigned long T, CurrentState &state, const Params& params)
   {
     state.ref_angle = (ref_angle > 0) ? max_tilt_angle : -max_tilt_angle;
   }
-
+*/
 }
 
 unsigned long last_stabilizer_exec = 0;
