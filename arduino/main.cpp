@@ -139,7 +139,13 @@ void setup()
 Task read_imu(200, []() {
   if (ROBOT.mpu.read())
   {
-    ROBOT.imu_filter.push(ROBOT.state.angle_reference - ROBOT.mpu.getRoll());
+    auto angle = ROBOT.mpu.getRoll();
+    ROBOT.imu_filter.push(ROBOT.state.angle_reference - angle);
+
+    if (fabs(angle) > (50 * M_PI / 180))
+    {
+      ROBOT.allowed_to_move = false;
+    }
   }
 });
 
