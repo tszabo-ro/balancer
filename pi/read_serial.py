@@ -48,19 +48,19 @@ class Communicator(threading.Thread):
                 i_kp  = float(parsed_str[1])
                 i_kd  = float(parsed_str[2])
                 i_ki  = float(parsed_str[3])
-                i_e   = float(parsed_str[4])/10
-                i_de  = float(parsed_str[5])/10
-                i_ie  = float(parsed_str[6])/10
-                cmd   = float(parsed_str[7])
-                vl    = float(parsed_str[8])
-                vr    = float(parsed_str[9])
-                o_kp  = float(parsed_str[10])
-                o_kd  = float(parsed_str[11])
-                o_ki  = float(parsed_str[12])
-                o_e   = float(parsed_str[13])/10
-                o_de  = float(parsed_str[14])/10
-                o_ie  = float(parsed_str[15])/10
-                a_ref = float(parsed_str[16])/10
+                v_kp  = float(parsed_str[4])
+                v_kd  = float(parsed_str[5])
+                v_ki  = float(parsed_str[6])
+                a_ref = float(parsed_str[7]) / 10 # [deg]
+                i_e   = float(parsed_str[8])      # [deg]
+                i_de  = float(parsed_str[9])      # [deg]
+                i_ie  = float(parsed_str[10])     # [deg]
+                v_e   = float(parsed_str[11]) / 10
+                v_de  = float(parsed_str[12]) / 10
+                v_ie  = float(parsed_str[13]) / 10
+                cmd   = float(parsed_str[14])
+                vl    = float(parsed_str[15])
+                vr    = float(parsed_str[16])
                 self.__data_lock.acquire()
                 self.__data['V']     = V
                 self.__data['i_kp']  = i_kp
@@ -72,12 +72,12 @@ class Communicator(threading.Thread):
                 self.__data['cmd']   = cmd
                 self.__data['vl']    = vl
                 self.__data['vr']    = vr
-                self.__data['o_kp']  = o_kp
-                self.__data['o_kd']  = o_kd
-                self.__data['o_ki']  = o_ki
-                self.__data['o_e']   = o_e
-                self.__data['o_de']  = o_de
-                self.__data['o_ie']  = o_ie
+                self.__data['o_kp']  = v_kp
+                self.__data['o_kd']  = v_kd
+                self.__data['o_ki']  = v_ki
+                self.__data['o_e']   = v_e
+                self.__data['o_de']  = v_de
+                self.__data['o_ie']  = v_ie
                 self.__data['a_ref'] = a_ref
 
                 self.__data_lock.notifyAll()
